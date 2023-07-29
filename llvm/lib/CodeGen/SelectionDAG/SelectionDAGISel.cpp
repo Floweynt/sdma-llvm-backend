@@ -102,6 +102,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -1071,6 +1072,8 @@ void SelectionDAGISel::InvalidateNodeId(SDNode *N) {
   N->setNodeId(InvalidId);
 }
 
+// void validateSelectionDag(SelectionDAG* DAG);
+
 // getUninvalidatedNodeId - get original uninvalidated node id.
 int SelectionDAGISel::getUninvalidatedNodeId(SDNode *N) {
   int Id = N->getNodeId();
@@ -1175,6 +1178,16 @@ void SelectionDAGISel::DoInstructionSelection() {
       LLVM_DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";
                  Node->dump(CurDAG));
 
+      /*std::cout << "ISEL debug start!"
+      std::cout << "!!! Selecting for for: "<< Node->getNodeId() << '\n';
+      Node->dumpr(CurDAG);
+      std::cout << "!!! Running ISel\n";
+      Select(Node);
+      std::cout << "!!! Validating ISel result\n";
+      validateSelectionDag(CurDAG);
+      std::cout << "!!! Dumping post-ISel result\n";
+      Node->dumpr(CurDAG);
+      std::cout << "-------------------------------------------\n";*/
       Select(Node);
     }
 

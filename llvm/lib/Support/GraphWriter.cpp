@@ -189,6 +189,7 @@ static const char *getProgramName(GraphProgram::Name program) {
 
 bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
                         GraphProgram::Name program) {
+    return true;
   std::string Filename = std::string(FilenameRef);
   std::string ErrMsg;
   std::string ViewerPath;
@@ -207,6 +208,7 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
       return false;
   }
 #endif
+  /*
   if (S.TryFindProgram("xdg-open", ViewerPath)) {
     std::vector<StringRef> args;
     args.push_back(ViewerPath);
@@ -215,7 +217,7 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
     if (!ExecGraphViewer(ViewerPath, args, Filename, wait, ErrMsg))
       return false;
   }
-
+*/
   // Graphviz
   if (S.TryFindProgram("Graphviz", ViewerPath)) {
     std::vector<StringRef> args;

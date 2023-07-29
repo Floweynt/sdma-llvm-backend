@@ -1,0 +1,72 @@
+#include "SDMAInstPrinter.h"
+#include "SDMA.h"
+#include "utils.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/raw_ostream.h"
+using namespace llvm;
+
+#define DEBUG_TYPE "asm-printer"
+
+#define GET_INSTRUCTION_NAME
+#define PRINT_ALIAS_INSTR
+#include "SDMAGenAsmWriter.inc"
+
+void SDMAInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << '%' << StringRef(getRegisterName(Reg)).lower();
+}
+
+void SDMAInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                                StringRef Annot, const MCSubtargetInfo &STI,
+                                raw_ostream &O) {
+  if (!printAliasInstr(MI, Address, O))
+    printInstruction(MI, Address, O);
+  printAnnotation(O, Annot);
+}
+
+void SDMAInstPrinter::printOperand(const MCInst *MI, int OpNum,
+                                   raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+
+  if (MO.isReg()) {
+    printRegName(O, MO.getReg());
+    return;
+  }
+
+  if (MO.isImm()) {
+    switch (MI->getOpcode()) {
+    default:
+      O << (int)MO.getImm();
+      return;
+    }
+  }
+
+  assert(MO.isExpr() && "Unknown operand kind in printOperand");
+  MO.getExpr()->print(O, &MAI);
+}
+
+void SDMAInstPrinter::printPCRelImm(const MCInst *MI, int OpNum,
+                                     raw_ostream &O) {
+  /*if (OpNum >= MI->size()) {
+    O << "<unknown>";
+    return;
+  }*/
+
+  const MCOperand &Op = MI->getOperand(OpNum);
+
+  if (Op.isImm()) {
+    int64_t Imm = Op.getImm();
+    O << '.';
+    if (Imm >= 0)
+      O << '+';
+
+    O << Imm;
+  } else {
+    assert(Op.isExpr() && "Unknown pcrel immediate operand");
+    O << *Op.getExpr();
+  }
+}
+

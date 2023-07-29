@@ -66,6 +66,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case riscv64:        return "riscv64";
   case shave:          return "shave";
   case sparc:          return "sparc";
+  case sdma:           return "sdma";
   case sparcel:        return "sparcel";
   case sparcv9:        return "sparcv9";
   case spir64:         return "spir64";
@@ -175,6 +176,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case dxil:        return "dx";
 
   case xtensa:      return "xtensa";
+  case sdma:        return "sdma";
   }
 }
 
@@ -396,6 +398,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("loongarch64", loongarch64)
     .Case("dxil", dxil)
     .Case("xtensa", xtensa)
+    .Case("sdma", sdma)
     .Default(UnknownArch);
 }
 
@@ -538,6 +541,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("loongarch64", Triple::loongarch64)
     .Case("dxil", Triple::dxil)
     .Case("xtensa", Triple::xtensa)
+    .Case("sdma", Triple::sdma)
     .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -875,6 +879,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
 
   case Triple::dxil:
     return Triple::DXContainer;
+  case Triple::sdma:
+    return Triple::ELF;
   }
   llvm_unreachable("unknown architecture");
 }
@@ -1433,6 +1439,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::x86:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
+  case llvm::Triple::sdma:
     return 32;
 
   case llvm::Triple::aarch64:
@@ -1524,6 +1531,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::x86:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::sdma:
     // Already 32-bit.
     break;
 
@@ -1575,6 +1583,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::tcele:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::sdma:
     T.setArch(UnknownArch);
     break;
 
