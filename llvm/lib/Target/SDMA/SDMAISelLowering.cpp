@@ -24,66 +24,118 @@ SDMATargetLowering::SDMATargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(Align(4));
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
+  setOperationAction(ISD::BR_CC, MVT::i32, Custom);
+}
+
+static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
+                       ISD::CondCode CC, const SDLoc &Dl, SelectionDAG &DAG) {
+  // FIXME: Handle bittests someday
+  assert(!LHS.getValueType().isFloatingPoint() && "We don't handle FP yet");
+
+  // FIXME: Handle jump negative someday
+  SDMACC::CondCodes TCC = SDMACC::COND_INVALID;
+  switch (CC) {
+  default:
+    llvm_unreachable("Invalid integer condition!");
+  case ISD::SETEQ:
+    TCC = SDMACC::COND_EQ;
+    break;
+  case ISD::SETNE:
+    TCC = SDMACC::COND_NEQ;
+    break;
+    case ISD::SETLE:
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETGE: 
+    TCC = SDMACC::COND_HS;
+    break;
+  case ISD::SETGT:
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETLT: 
+    TCC = SDMACC::COND_LT;
+    break;
+  }
+
+  TargetCC = DAG.getConstant(TCC, Dl, MVT::i8);
+  return DAG.getNode(SDMAISD::CMP, Dl, MVT::Glue, LHS, RHS);
+}
+
+SDValue SDMATargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  SDLoc Dl(Op);
+
+  SDValue TargetCC;
+  SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, Dl, DAG);
+
+  return DAG.getNode(SDMAISD::BR_CC, Dl, Op.getValueType(), Chain, Dest,
+                     TargetCC, Flag);
 }
 
 SDValue SDMATargetLowering::LowerOperation(SDValue Op,
                                            SelectionDAG &DAG) const {
-  const SDNode *N = Op.getNode();
-  EVT VT = Op.getValueType();
-  SDLoc DL(N);
-
-
-  return Op;
-  /*
-  if (Op.getOpcode() == ISD::ADD) {
-    assert(N->getNumOperands() == 2 && "my assumption was false... :(");
-    std::cout << "lowering add\n";
-    auto *Lhs = N->getOperand(0).getNode();
-    auto *Rhs = N->getOperand(1).getNode();
-    if ((Lhs->getOpcode() == ISD::Constant) !=
-        (Rhs->getOpcode() == ISD::Constant)) {
-      auto *ConstNode =
-          (ConstantSDNode *)(Lhs->getOpcode() == ISD::Constant ? Lhs : Rhs);
-      if (ConstNode->getSExtValue() < 0) {
-        return DAG.getNode(
-            ISD::SUB, DL, MVT::i32,
-            N->getOperand(Lhs->getOpcode() == ISD::Constant ? 1 : 0),
-            DAG.getConstant(-ConstNode->getSExtValue(), DL, MVT::i32));
-      }
-    }
+  switch (Op.getOpcode()) {
+  case ISD::BRCOND:
+    return LowerBR_CC(Op, DAG);
+  default:
+    llvm_unreachable("unimplemented operand");
   }
-  if(Op.getOpcode() == ISD::SHL) {
-    assert(N->getNumOperands() == 2 && "my assumption was false... :(");
-    std::cout << "lowering shl\n";
-    auto *Lhs = N->getOperand(0).getNode();
-    auto *Rhs = N->getOperand(1).getNode();
-
-    if ((Lhs->getOpcode() == ISD::Constant) !=
-        (Rhs->getOpcode() == ISD::Constant)) {
-      auto *ConstNode =
-          (ConstantSDNode *)(Lhs->getOpcode() == ISD::Constant ? Lhs : Rhs);
-
-      auto Amount = ConstNode->getZExtValue();
-      if(Amount == 1)
-          return Op;
-
-      SDValue Shiftee = N->getOperand(Lhs->getOpcode() == ISD::Constant ? 1 : 0);
-        
-      for(size_t I = 0; I < Amount; I++) {
-        Shiftee = DAG.getNode(
-            ISD::SHL, DL, MVT::i32,
-            Shiftee,
-            DAG.getConstant(1, DL, MVT::i32));
-      }
-
-      return Shiftee;
-    }
-
-  }
-
-
-  return Op;*/
 }
+
+/*
+if (Op.getOpcode() == ISD::ADD) {
+  assert(N->getNumOperands() == 2 && "my assumption was false... :(");
+  std::cout << "lowering add\n";
+  auto *Lhs = N->getOperand(0).getNode();
+  auto *Rhs = N->getOperand(1).getNode();
+  if ((Lhs->getOpcode() == ISD::Constant) !=
+      (Rhs->getOpcode() == ISD::Constant)) {
+    auto *ConstNode =
+        (ConstantSDNode *)(Lhs->getOpcode() == ISD::Constant ? Lhs : Rhs);
+    if (ConstNode->getSExtValue() < 0) {
+      return DAG.getNode(
+          ISD::SUB, DL, MVT::i32,
+          N->getOperand(Lhs->getOpcode() == ISD::Constant ? 1 : 0),
+          DAG.getConstant(-ConstNode->getSExtValue(), DL, MVT::i32));
+    }
+  }
+}
+if(Op.getOpcode() == ISD::SHL) {
+  assert(N->getNumOperands() == 2 && "my assumption was false... :(");
+  std::cout << "lowering shl\n";
+  auto *Lhs = N->getOperand(0).getNode();
+  auto *Rhs = N->getOperand(1).getNode();
+
+  if ((Lhs->getOpcode() == ISD::Constant) !=
+      (Rhs->getOpcode() == ISD::Constant)) {
+    auto *ConstNode =
+        (ConstantSDNode *)(Lhs->getOpcode() == ISD::Constant ? Lhs : Rhs);
+
+    auto Amount = ConstNode->getZExtValue();
+    if(Amount == 1)
+        return Op;
+
+    SDValue Shiftee = N->getOperand(Lhs->getOpcode() == ISD::Constant ? 1 :
+0);
+
+    for(size_t I = 0; I < Amount; I++) {
+      Shiftee = DAG.getNode(
+          ISD::SHL, DL, MVT::i32,
+          Shiftee,
+          DAG.getConstant(1, DL, MVT::i32));
+    }
+
+    return Shiftee;
+  }
+
+}
+
+
+return Op;*/
 
 bool SDMATargetLowering::useSoftFloat() const { return true; }
 
@@ -153,7 +205,7 @@ SDMATargetLowering::getRegisterByName(const char *RegName, LLT VT,
 
 EVT SDMATargetLowering::getSetCCResultType(const DataLayout &DL,
                                            LLVMContext &Context, EVT VT) const {
-  not_implemented();
+  return EVT::getIntegerVT(Context, 32);
 }
 
 SDValue SDMATargetLowering::LowerFormalArguments(
@@ -365,6 +417,7 @@ SDValue SDMATargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
+
   const Function *F = nullptr;
   if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
@@ -378,7 +431,13 @@ SDValue SDMATargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                          getPointerTy(DAG.getDataLayout()));
   }
 
-  CCInfo.AnalyzeCallOperands(Outs, CC_SDMA);
+  // Variadic functions do not need all the analysis below.
+  if (IsVarArg) {
+    not_implemented();
+  } else {
+    CCInfo.AnalyzeCallOperands(Outs, CC_SDMA);
+  }
+
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
 
@@ -519,10 +578,10 @@ SDValue SDMATargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 }
 
 bool SDMATargetLowering::CanLowerReturn(
-    CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
+    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
   SmallVector<CCValAssign, 16> RVLocs;
-  CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_SDMA);
 }
 

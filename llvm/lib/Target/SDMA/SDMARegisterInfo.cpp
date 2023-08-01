@@ -1,5 +1,6 @@
 #include "SDMARegisterInfo.h"
 #include "SDMAFrameLowering.h"
+#include "SDMAMachineFunctionInfo.h"
 #include "utils.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"

@@ -1,5 +1,6 @@
 #include "MCTargetDesc/SDMAMCExpr.h"
 #include "SDMA.h"
+#include "utils.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -9,6 +10,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -42,9 +44,9 @@ static MCOperand lowerSymbolOperand(const MachineInstr *MI,
   }
 
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Symbol, AP.OutContext);
-  const SDMAMCExpr *expr =
+  const SDMAMCExpr *Expr =
       SDMAMCExpr::create((SDMAMCExpr::VariantKind)Kind, MCSym, AP.OutContext);
-  return MCOperand::createExpr(expr);
+  return MCOperand::createExpr(Expr);
 }
 
 static MCOperand lowerOperand(const MachineInstr *MI, const MachineOperand &MO,
@@ -52,16 +54,34 @@ static MCOperand lowerOperand(const MachineInstr *MI, const MachineOperand &MO,
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     if (MO.isImplicit())
-      break;
+      return MCOperand();
     return MCOperand::createReg(MO.getReg());
-  case MachineOperand::MO_GlobalAddress:
-    return lowerSymbolOperand(MI, MO, AP);
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
+
+  case MachineOperand::MO_GlobalAddress:
   case MachineOperand::MO_BlockAddress:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_ConstantPoolIndex:
+  case MachineOperand::MO_MachineBasicBlock:
     return lowerSymbolOperand(MI, MO, AP);
+
+  case MachineOperand::MO_CImmediate:
+  case MachineOperand::MO_FPImmediate:
+  case MachineOperand::MO_FrameIndex:
+  case MachineOperand::MO_TargetIndex:
+  case MachineOperand::MO_JumpTableIndex:
+  case MachineOperand::MO_RegisterMask:
+  case MachineOperand::MO_RegisterLiveOut:
+  case MachineOperand::MO_Metadata:
+  case MachineOperand::MO_MCSymbol:
+  case MachineOperand::MO_CFIIndex:
+  case MachineOperand::MO_IntrinsicID:
+  case MachineOperand::MO_Predicate:
+  case MachineOperand::MO_ShuffleMask:
+  case MachineOperand::MO_DbgInstrRef:
+    not_implemented();
   }
-  return MCOperand();
 }
 
 void llvm::LowerSDMAMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,

@@ -1,6 +1,9 @@
 #include "SDMAFrameLowering.h"
 #include "MCTargetDesc/SDMAMCTargetDesc.h"
+#include "SDMAInstrInfo.h"
 #include "SDMAMachineFunctionInfo.h"
+#include "SDMARegisterInfo.h"
+#include "SDMASubtarget.h"
 #include "utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -12,7 +15,8 @@ using namespace llvm;
 
 SDMAFrameLowering::SDMAFrameLowering(const SDMASubtarget &ST)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(8), 0,
-                          Align(8)) {}
+                          Align(8)),
+      ST(ST) {}
 
 // emitProlog/emitEpilog - These methods insert prolog and epilog code into
 /// the function.
@@ -28,13 +32,25 @@ void SDMAFrameLowering::emitPrologue(MachineFunction &MF,
 }
 
 void SDMAFrameLowering::emitEpilogue(MachineFunction &MF,
-                                     MachineBasicBlock &MBB) const {}
+                                     MachineBasicBlock &MBB) const {
+
+  std::cerr << "TODO: " << __FILE__ << ":" << __LINE__ << '\n';
+}
 
 MachineBasicBlock::iterator SDMAFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  std::cerr << "TODO: " << __FILE__ << ":" << __LINE__ << '\n';
-  not_implemented();
+
+  if (!hasReservedCallFrame(MF)) {
+    MachineInstr &MI = *I;
+    int Size = MI.getOperand(0).getImm();
+    if (MI.getOpcode() == sdma::ADJCALLSTACKDOWN)
+      Size = -Size;
+
+    if (Size)
+      emitSPAdjustment(MF, MBB, I, Size);
+  }
+  return MBB.erase(I);
 }
 
 bool SDMAFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
@@ -53,23 +69,14 @@ bool SDMAFrameLowering::hasFP(const MachineFunction &MF) const {
 void SDMAFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                              BitVector &SavedRegs,
                                              RegScavenger *RS) const {
+  const SDMARegisterInfo *TRI = ST.getRegisterInfo();
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  if (isLeafProc(MF)) {
-    SDMAMachineFunctionInfo *MFI = MF.getInfo<SDMAMachineFunctionInfo>();
-    MFI->setLeafProc(true);
-
-    remapRegsForLeafProc(MF);
-  }
 }
 
 StackOffset
 SDMAFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                           Register &FrameReg) const {
   not_implemented();
-}
-
-void SDMAFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
-  std::cerr << "TODO: optimize this\n";
 }
 
 bool SDMAFrameLowering::isLeafProc(MachineFunction &MF) const {
@@ -86,7 +93,25 @@ bool SDMAFrameLowering::isLeafProc(MachineFunction &MF) const {
 void SDMAFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                          MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI,
-                                         int NumBytes, unsigned ADDrr,
-                                         unsigned ADDri) const {
+                                         int NumBytes) const {
+  DebugLoc dl;
+  const SDMAInstrInfo &TII =
+      *static_cast<const SDMAInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  unsigned InstrType = sdma::ADDri;
+
+  if (NumBytes < 0) {
+    InstrType = sdma::SUBri;
+  }
+
+  if (NumBytes > 0 && NumBytes < 256) {
+    BuildMI(MBB, MBBI, dl, TII.get(InstrType))
+        .addReg(sdma::GP7, RegState::Define)
+        .addReg(sdma::GP7)
+        .addImm(NumBytes);
+    return;
+  }
+
   not_implemented();
 }
+

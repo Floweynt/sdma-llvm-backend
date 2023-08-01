@@ -13,6 +13,11 @@ def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDCallSeqEnd<[ SDTCisVT<0, i32>
                                         SDTCisVT<1, i32> ]>,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+def sdma_cmp     : SDNode<"SDMAISD::CMP", SDTypeProfile<0, 2, [SDTCisSameAs<0, 1>]>, [SDNPOutGlue]>;
+def sdma_brcc    : SDNode<"SDMAISD::BR_CC", SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>,
+                              SDTCisVT<1, i8>]>,
+                            [SDNPHasChain, SDNPInGlue]>;
+
 // Operands
 class ImmAsmOperand<string prefix, int width, string suffix = ""> : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
@@ -62,6 +67,11 @@ def simm8 : simm<8>;
 def simm32 : simm<32>;
 
 def brtarget8 : brtarget<OtherVT>;
+
+def condcode : Operand<OtherVT> {
+  let PrintMethod = "printPCRelImm";
+  let EncoderMethod = "encodeBrTarget";
+}
 
 class SDMAInstr<dag outOper, dag inOper, string asm, list<dag> pattern, bits<16> inst> : Instruction {
   let Namespace = "sdma";
@@ -178,6 +188,9 @@ defm OR : ArithInstr<"or", or>;
 defm XOR : ArithInstr<"xor", xor>;
 defm ANDN : ArithInstrExt<"andn", (and GPRegs:$sdest, (not GPRegs:$src))>;
 
+def CMPEQrr : SDMAInstr<(outs), (ins GPRegs:$rhs, GPRegs:$lhs), "cmpeq $rhs, $lhs ; flag = $rhs == $lhs", [], 0>;
+def CMPEQri : SDMAInstr<(outs), (ins GPRegs:$rhs, uimm8:$lhs), "cmpeq $rhs, $lhs ; flag = $rhs == $lhs", [], 0>;
+
 def ASR1 : ShiftInstr<"asr1", sra>;
 def LSL1 : ShiftInstr<"lsl1", shl>;
 def LSR1 : ShiftInstr<"lsr1", srl>;
@@ -193,10 +206,10 @@ def RORB : ShiftInstr<"rorb", rotr, 8>;
 // control flow
 let isTerminator = 1, isBarrier = 1 in {
   let isBranch = 1 in {
-    def BDF : SDMAInstr<(outs), (ins uimm14:$target), "bdf", [], 0>;
-    def BSF : SDMAInstr<(outs), (ins uimm14:$target), "bsf", [], 0>;
-    def BF : SDMAInstr<(outs), (ins uimm14:$target), "bf", [], 0>;
-    def BT : SDMAInstr<(outs), (ins uimm14:$target), "bt", [], 0>;
+    def BDF : SDMAInstr<(outs), (ins brtarget8:$target), "bdf $target", [], 0>;
+    def BSF : SDMAInstr<(outs), (ins brtarget8:$target), "bsf $target", [], 0>;
+    def BF : SDMAInstr<(outs), (ins brtarget8:$target), "bf $target", [], 0>;
+    def BT : SDMAInstr<(outs), (ins brtarget8:$target), "bt $target", [], 0>;
     def JMP : SDMAInstr<(outs), (ins brtarget8:$target), "jmp $target ; %pc = $target", [(br bb:$target)], 0>;
     //def JMP : SDMAInstr<(outs), (ins), "jmp", [], 0>;
   }
@@ -204,7 +217,6 @@ let isTerminator = 1, isBarrier = 1 in {
   def RET : SDMAInstr<(outs), (ins), "ret ; %pc = %rpc", [(ret)], 0b0000000000000110> {
     let isReturn = 1;
   }
-
 }
 
 let isCall = 1 in {

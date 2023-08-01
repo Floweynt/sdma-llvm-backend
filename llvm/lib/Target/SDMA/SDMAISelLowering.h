@@ -4,8 +4,8 @@
 
 namespace llvm {
 
-    namespace SDMAISD {
-enum NodeType : unsigned { FIRST_NUMBER = ISD::BUILTIN_OP_END, RET, CALL };
+namespace SDMAISD {
+enum NodeType : unsigned { FIRST_NUMBER = ISD::BUILTIN_OP_END, RET, CALL, CMP, BR_CC};
 } // namespace SDMAISD
 
 class SDMASubtarget;
@@ -16,6 +16,7 @@ public:
   SDMATargetLowering(const TargetMachine &TM, const SDMASubtarget &STI);
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
 
   bool useSoftFloat() const override;
   void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
@@ -32,8 +33,8 @@ public:
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
   ConstraintWeight
-  getSingleConstraintMatchWeight(AsmOperandInfo &info,
-                                 const char *constraint) const override;
+  getSingleConstraintMatchWeight(AsmOperandInfo &Info,
+                                 const char *Constraint) const override;
 
   void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
                                     std::vector<SDValue> &Ops,
@@ -65,22 +66,22 @@ public:
                          EVT VT) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                               bool isVarArg,
+                               bool IsVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
-                               const SDLoc &dl, SelectionDAG &DAG,
+                               const SDLoc &Dl, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
-                      bool isVarArg,
+                      bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       LLVMContext &Context) const override;
 
-  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &Dl,
                       SelectionDAG &DAG) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;

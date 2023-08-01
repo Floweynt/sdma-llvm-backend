@@ -66,7 +66,7 @@ bool SDMADAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
 bool SDMADAGToDAGISel::tryInlineAsm(SDNode *N) { not_implemented(); }
 
 void SDMADAGToDAGISel::Select(SDNode *N) {
-  SDLoc dl(N);
+  SDLoc Dl(N);
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
     return;
@@ -85,8 +85,6 @@ void SDMADAGToDAGISel::Select(SDNode *N) {
   }
 
   SelectCode(N);
-  if (N->getNumOperands())
-    N->getOperand(N->getNumOperands() - 1).getValueType();
 }
 
 void validateSelectionDag(SelectionDAG* DAG)

@@ -9,7 +9,6 @@ class SDMAMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
       VK_SDMA_None
-
   };
 
 private:
