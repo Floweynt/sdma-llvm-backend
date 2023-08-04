@@ -9,6 +9,6 @@ Target &llvm::getTheSDMATarget() {
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSDMATargetInfo() {
-  RegisterTarget<Triple::sdma, /*HasJIT=*/false> X(getTheSDMATarget(),
-                                                    "sdma", "SDMA", "SDMA");
+  RegisterTarget<Triple::sdma, /*HasJIT=*/false> X(getTheSDMATarget(), "sdma",
+                                                   "SDMA", "SDMA");
 }

@@ -59,9 +59,7 @@ bool SDMAPassConfig::addInstSelector() {
 
 void SDMAPassConfig::addPreEmitPass() {}
 
-void SDMAPassConfig::addPreSched2() {
-  addPass(createSDMAExpandPseudoPass());
-}
+void SDMAPassConfig::addPreSched2() { addPass(createSDMAExpandPseudoPass()); }
 
 SDMATargetMachine::SDMATargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
@@ -74,8 +72,7 @@ SDMATargetMachine::SDMATargetMachine(const Target &T, const Triple &TT,
                         getEffectiveSDMACodeModel(CM), OL),
       Subtarget(TT, CPU, FS, *this),
       TLOF(std::make_unique<SDMAELFTargetObjectFile>()) {
-  // I dont know
-  AsmInfo.reset(new MCAsmInfo());
+  initAsmInfo();
 }
 
 const SDMASubtarget *

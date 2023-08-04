@@ -1,6 +1,5 @@
 def CC_SDMA : CallingConv<[
-    CCIfType<[i32], CCAssignToReg<[GP0, GP1, GP2, GP3]>>,
-    CCAssignToStack<4, 4>
+  CCIfType<[i32], CCAssignToReg<[GP0, GP1, GP2, GP3]>>, CCAssignToStack<4, 4>
 ]>;
 
 def RetCC_SDMA : CallingConv<[

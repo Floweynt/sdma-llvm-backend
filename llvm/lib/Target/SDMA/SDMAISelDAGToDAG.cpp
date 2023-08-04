@@ -20,7 +20,7 @@ public:
 
   SDMADAGToDAGISel() = delete;
 
-  explicit SDMADAGToDAGISel(SDMATargetMachine &tm) : SelectionDAGISel(ID, tm) {}
+  explicit SDMADAGToDAGISel(SDMATargetMachine &Tm) : SelectionDAGISel(ID, Tm) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<SDMASubtarget>();

@@ -9,9 +9,7 @@ class TargetMachine;
 
 class SDMAELFTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
-  SDMAELFTargetObjectFile() :
-    TargetLoweringObjectFileELF()
-  {}
+  SDMAELFTargetObjectFile() : TargetLoweringObjectFileELF() {}
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 

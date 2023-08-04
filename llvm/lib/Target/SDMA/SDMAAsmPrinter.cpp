@@ -43,9 +43,9 @@ public:
 
   StringRef getPassName() const override { return "SDMA Assembly Printer"; }
 
-  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
+  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS);
 
-  void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS,
+  void printMemOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS,
                        const char *Modifier = nullptr);
 
   void emitFunctionBodyStart() override;
@@ -86,10 +86,10 @@ void SDMAAsmPrinter::emitFunctionBodyStart() {
   const MachineRegisterInfo &MRI = MF->getRegInfo();
 }
 
-void SDMAAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
+void SDMAAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
                                   raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
-  const MachineOperand &MO = MI->getOperand(opNum);
+  const MachineOperand &MO = MI->getOperand(OpNum);
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
@@ -103,10 +103,10 @@ void SDMAAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   }
 }
 
-void SDMAAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
+void SDMAAsmPrinter::printMemOperand(const MachineInstr *MI, int OpNum,
                                      raw_ostream &O, const char *Modifier) {
-not_implemented();
-    //printOperand(MI, opNum, O);
+  not_implemented();
+  // printOperand(MI, opNum, O);
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.

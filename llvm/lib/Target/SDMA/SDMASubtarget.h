@@ -32,6 +32,8 @@ public:
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
-  const SDMATargetLowering *getTargetLowering() const override { return &TLInfo; }
+  const SDMATargetLowering *getTargetLowering() const override {
+    return &TLInfo;
+  }
 };
 } // namespace llvm

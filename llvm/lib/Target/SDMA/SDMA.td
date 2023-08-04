@@ -8,6 +8,4 @@ def SDMAInstrInfo : InstrInfo;
 
 def : Processor<"generic", NoItineraries, []>;
 
-def SDMA : Target {
-  let InstructionSet = SDMAInstrInfo;
-}
+def SDMA : Target { let InstructionSet = SDMAInstrInfo; }

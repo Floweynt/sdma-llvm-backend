@@ -5,7 +5,14 @@
 namespace llvm {
 
 namespace SDMAISD {
-enum NodeType : unsigned { FIRST_NUMBER = ISD::BUILTIN_OP_END, RET, CALL, CMP, BR_T, BR_F};
+enum NodeType : unsigned {
+  FIRST_NUMBER = ISD::BUILTIN_OP_END,
+  RET,
+  CALL,
+  CMP,
+  BR_T,
+  BR_F
+};
 } // namespace SDMAISD
 
 class SDMASubtarget;

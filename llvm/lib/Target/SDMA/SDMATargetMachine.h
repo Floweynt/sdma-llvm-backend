@@ -1,7 +1,7 @@
 #pragma once
 #include "SDMAFrameLowering.h"
-#include "SDMASubtarget.h"
 #include "SDMAInstrInfo.h"
+#include "SDMASubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -11,7 +11,7 @@
 namespace llvm {
 class SDMATargetMachine final : public LLVMTargetMachine {
   SDMASubtarget Subtarget;
-    std::unique_ptr<TargetLoweringObjectFile> TLOF;
+  std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
 public:
   SDMATargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -24,7 +24,7 @@ public:
   const SDMASubtarget *getSubtargetImpl(const Function &) const override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
-  
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }

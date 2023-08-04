@@ -34,7 +34,9 @@ SDMARegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
 BitVector SDMARegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
-  markSuperRegs(Reserved, sdma::GP5); // FIXME: Figure out a register we can use as temporary
+  markSuperRegs(
+      Reserved,
+      sdma::GP5); // FIXME: Figure out a register we can use as temporary
   markSuperRegs(Reserved, sdma::GP6); // we use gp6 as frame pointer
   markSuperRegs(Reserved, sdma::GP7); // we use gp7 as SP
   return Reserved;
@@ -49,20 +51,20 @@ static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
   }
 
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  if(-256 < Offset && Offset <= (255 + Offset < (1 << 5))) {
+  if (-256 < Offset && Offset <= (255 + Offset < (1 << 5))) {
     BuildMI(*MI.getParent(), II, Dl, TII.get(sdma::MOV), sdma::GP5)
         .addReg(sdma::GP7);
     unsigned Opc = sdma::ADDri;
     unsigned LoadOff = 0;
 
-    if(Offset < 0) {
-        Opc = sdma::SUBri;
-        Offset = -Offset;
+    if (Offset < 0) {
+      Opc = sdma::SUBri;
+      Offset = -Offset;
     }
 
-    else if(Offset > 255) {
-        LoadOff = Offset - 255;
-        Offset = 255;
+    else if (Offset > 255) {
+      LoadOff = Offset - 255;
+      Offset = 255;
     }
 
     BuildMI(*MI.getParent(), II, Dl, TII.get(Opc), sdma::GP5)

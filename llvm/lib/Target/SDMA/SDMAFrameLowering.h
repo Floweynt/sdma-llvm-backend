@@ -8,7 +8,8 @@ namespace llvm {
 
 class SDMASubtarget;
 class SDMAFrameLowering : public TargetFrameLowering {
-    const SDMASubtarget& ST;
+  const SDMASubtarget &ST;
+
 public:
   explicit SDMAFrameLowering(const SDMASubtarget &ST);
 

@@ -1,0 +1,8 @@
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+ELF_RELOC(R_SDMA_NONE,         0)
+ELF_RELOC(R_SDMA_REL_8,            1)
+ELF_RELOC(R_SDMA_ABS_14,            1)
+

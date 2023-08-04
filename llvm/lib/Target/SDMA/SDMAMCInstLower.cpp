@@ -16,7 +16,7 @@ using namespace llvm;
 
 static MCOperand lowerSymbolOperand(const MachineInstr *MI,
                                     const MachineOperand &MO, AsmPrinter &AP) {
-  auto Kind = MO.getTargetFlags();
+  SDMAMCExpr::VariantKind Kind = (SDMAMCExpr::VariantKind)MO.getTargetFlags();
   const MCSymbol *Symbol = nullptr;
 
   switch (MO.getType()) {
@@ -44,8 +44,7 @@ static MCOperand lowerSymbolOperand(const MachineInstr *MI,
   }
 
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Symbol, AP.OutContext);
-  const SDMAMCExpr *Expr =
-      SDMAMCExpr::create((SDMAMCExpr::VariantKind)Kind, MCSym, AP.OutContext);
+  const SDMAMCExpr *Expr = SDMAMCExpr::create(Kind, MCSym, AP.OutContext);
   return MCOperand::createExpr(Expr);
 }
 

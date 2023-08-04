@@ -178,7 +178,7 @@ SDMATargetLowering::getConstraintType(StringRef Constraint) const {
 
 llvm::SDMATargetLowering::ConstraintWeight
 SDMATargetLowering::getSingleConstraintMatchWeight(
-    AsmOperandInfo &info, const char *constraint) const {
+    AsmOperandInfo &Info, const char *Constraint) const {
   not_implemented();
 }
 
@@ -214,18 +214,16 @@ EVT SDMATargetLowering::getSetCCResultType(const DataLayout &DL,
 }
 
 SDValue SDMATargetLowering::LowerFormalArguments(
-    SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &Dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SDMA);
-
-  const unsigned StackOffset = 92;
 
   unsigned InIdx = 0;
   for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I, ++InIdx) {
@@ -271,7 +269,7 @@ SDValue SDMATargetLowering::LowerFormalArguments(
     }*/
       Register VReg = RegInfo.createVirtualRegister(&sdma::GPRegsRegClass);
       MF.getRegInfo().addLiveIn(VA.getLocReg(), VReg);
-      SDValue Arg = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i32);
+      SDValue Arg = DAG.getCopyFromReg(Chain, Dl, VReg, MVT::i32);
 
       if (VA.getLocVT() != MVT::i32) {
         assert(false && "please have i32 arguments, i dont want to implement "
@@ -285,10 +283,10 @@ SDValue SDMATargetLowering::LowerFormalArguments(
     assert(false && "failed");
     assert(VA.isMemLoc());
 
+    /*
     unsigned Offset = VA.getLocMemOffset() + StackOffset;
     auto PtrVT = getPointerTy(DAG.getDataLayout());
 
-    /*
     if (VA.needsCustom()) {
       assert(VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::v2i32);
       // If it is double-word aligned, just load.
@@ -359,7 +357,7 @@ SDValue SDMATargetLowering::LowerFormalArguments(
   }
 
   // Store remaining ArgRegs to the stack if this is a varargs function.
-  if (isVarArg) {
+  if (IsVarArg) {
     not_implemented();
     /*
   static const MCPhysReg ArgRegs[] = {
@@ -605,12 +603,12 @@ SDMATargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
-  for (unsigned i = 0, realRVLocIdx = 0; i != RVLocs.size();
-       ++i, ++realRVLocIdx) {
-    CCValAssign &VA = RVLocs[i];
+  for (unsigned I = 0, RealRvLocIdx = 0; I != RVLocs.size();
+       ++I, ++RealRvLocIdx) {
+    CCValAssign &VA = RVLocs[I];
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    SDValue Arg = OutVals[realRVLocIdx];
+    SDValue Arg = OutVals[RealRvLocIdx];
 
     if (VA.needsCustom()) {
       not_implemented();
@@ -622,7 +620,6 @@ SDMATargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
-  unsigned RetAddrOffset = 8;
   if (MF.getFunction().hasStructRetAttr()) {
     not_implemented();
   }

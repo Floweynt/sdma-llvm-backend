@@ -12,11 +12,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SDMAGenSubtargetInfo.inc"
 
-SDMASubtarget::SDMASubtarget(const Triple &TT, StringRef CPU,
-                 StringRef FS, const TargetMachine &TM)
-    : SDMAGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), TargetTriple(TT), InstrInfo(*this),
-    TLInfo(TM, *this), FrameLowering(*this)
-{
-}
-
+SDMASubtarget::SDMASubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                             const TargetMachine &TM)
+    : SDMAGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), TargetTriple(TT),
+      InstrInfo(*this), TLInfo(TM, *this), FrameLowering(*this) {}
 

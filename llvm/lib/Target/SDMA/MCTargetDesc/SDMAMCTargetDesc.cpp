@@ -1,10 +1,8 @@
 // TODO: fix
 
 #include "SDMAMCTargetDesc.h"
-// #include "SDMAInstPrinter.h"
-// #include "SDMAMCAsmInfo.h"
-// #include "SDMATargetStreamer.h"
 #include "MCTargetDesc/SDMAInstPrinter.h"
+#include "SDMATargetStreamer.h"
 #include "TargetInfo/SDMATargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
@@ -30,6 +28,22 @@ using namespace llvm;
 #include "SDMAGenRegisterInfo.inc"
 
 #include "llvm/Support/Compiler.h"
+
+static MCTargetStreamer *
+createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new SDMATargetELFStreamer(S);
+}
+
+static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
+                                                 formatted_raw_ostream &OS,
+                                                 MCInstPrinter *InstPrint,
+                                                 bool IsVerboseAsm) {
+  return new SDMATargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new SDMATargetStreamer(S);
+}
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSDMATargetMC() {
   RegisterMCAsmInfoFn X(getTheSDMATarget(),
@@ -57,24 +71,25 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSDMATargetMC() {
         return createSDMAMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
       });
 
-  /*
   // Register the MC Code Emitter.
-  //TargetRegistry::RegisterMCCodeEmitter(getTheSDMATarget(),
-  createSDMAMCCodeEmitter);
+  TargetRegistry::RegisterMCCodeEmitter(getTheSDMATarget(),
+                                        createSDMAMCCodeEmitter);
 
   // Register the asm backend.
-  // TargetRegistry::RegisterMCAsmBackend(*T, createSDMAAsmBackend);
+  TargetRegistry::RegisterMCAsmBackend(getTheSDMATarget(),
+                                       createSDMAAsmBackend);
 
   // Register the object target streamer.
-  TargetRegistry::RegisterObjectTargetStreamer(*T,
+  TargetRegistry::RegisterObjectTargetStreamer(getTheSDMATarget(),
                                                createObjectTargetStreamer);
 
   // Register the asm streamer.
-  TargetRegistry::RegisterAsmTargetStreamer(*T, createTargetAsmStreamer);
+  TargetRegistry::RegisterAsmTargetStreamer(getTheSDMATarget(),
+                                            createTargetAsmStreamer);
 
   // Register the null streamer.
-  TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
-*/
+  TargetRegistry::RegisterNullTargetStreamer(getTheSDMATarget(),
+                                             createNullTargetStreamer);
   // Register the MCInstPrinter
   TargetRegistry::RegisterMCInstPrinter(
       getTheSDMATarget(),

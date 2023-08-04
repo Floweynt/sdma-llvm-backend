@@ -1,7 +1,7 @@
 #pragma once
 
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "MCTargetDesc/SDMAMCTargetDesc.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "SDMAGenRegisterInfo.inc"

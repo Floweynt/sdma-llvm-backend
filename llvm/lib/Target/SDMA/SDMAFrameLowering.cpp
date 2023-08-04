@@ -22,13 +22,57 @@ SDMAFrameLowering::SDMAFrameLowering(const SDMASubtarget &ST)
 /// the function.
 void SDMAFrameLowering::emitPrologue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {
-  std::cerr << "TODO: " << __FILE__ << ":" << __LINE__ << '\n';
+  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SDMAInstrInfo &TII =
+      *static_cast<const SDMAInstrInfo *>(ST.getInstrInfo());
+  MachineBasicBlock::iterator MBBI = MBB.begin();
+
+  // Debug location must be unknown since the first debug location is used
+  // to determine the end of the prologue.
+  DebugLoc DL;
+
+  // FIXME: This appears to be overallocating.  Needs investigation.
+  // Get the number of bytes to allocate from the FrameInfo.
+  unsigned StackSize = MFI.getStackSize();
+
+  // Push old FP
+  // st %fp,-4[*%sp]
+  buildPush(MBB, MBBI, &TII, sdma::GP6);
+
+  // Generate new FP
+  // add %sp,8,%fp
+  BuildMI(MBB, MBBI, DL, TII.get(sdma::MOV), sdma::GP6).addReg(sdma::GP7);
+
+  BuildMI(MBB, MBBI, DL, TII.get(sdma::ADDri), sdma::GP6)
+      .addReg(sdma::GP6)
+      .addImm(8);
+
+  // Allocate space on the stack if needed
+  // sub %sp,StackSize,%sp
+  if (StackSize != 0) {
+    
+  BuildMI(MBB, MBBI, DL, TII.get(sdma::SUBri), sdma::GP7)
+      .addReg(sdma::GP7)
+      .addImm(StackSize)
+      .setMIFlag(MachineInstr::FrameSetup);
+  }
+
+  if (MFI.hasVarSizedObjects())
+    not_implemented();
 }
 
 void SDMAFrameLowering::emitEpilogue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  const SDMAInstrInfo &TII =
+      *static_cast<const SDMAInstrInfo *>(ST.getInstrInfo());
+  DebugLoc DL = MBBI->getDebugLoc();
 
-  std::cerr << "TODO: " << __FILE__ << ":" << __LINE__ << '\n';
+  BuildMI(MBB, MBBI, DL, TII.get(sdma::MOV), sdma::GP7)
+      .addReg(sdma::GP6);
+  buildPop(MBB, MBBI, &TII, sdma::GP6);
 }
 
 MachineBasicBlock::iterator SDMAFrameLowering::eliminateCallFramePseudoInstr(

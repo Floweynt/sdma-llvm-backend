@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SDMAFixupKinds.h"
 #include "llvm/MC/MCExpr.h"
 
 namespace llvm {
@@ -7,9 +8,7 @@ namespace llvm {
 class StringRef;
 class SDMAMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
-      VK_SDMA_None
-  };
+  enum VariantKind { VK_SDMA_None };
 
 private:
   const VariantKind Kind;
@@ -23,7 +22,7 @@ public:
   /// @{
 
   static const SDMAMCExpr *create(VariantKind Kind, const MCExpr *Expr,
-                                 MCContext &Ctx);
+                                  MCContext &Ctx);
   /// @}
   /// @name Accessors
   /// @{
@@ -35,8 +34,7 @@ public:
   const MCExpr *getSubExpr() const { return Expr; }
   /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {
@@ -49,8 +47,11 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static VariantKind parseVariantKind(StringRef name);
+  static VariantKind parseVariantKind(StringRef Name);
   static bool printVariantKind(raw_ostream &OS, VariantKind Kind);
+
+  SDMA::Fixups getFixupKind() const { return getFixupKind(Kind); }
+  static SDMA::Fixups getFixupKind(VariantKind Kind);
 };
 
 } // end namespace llvm.

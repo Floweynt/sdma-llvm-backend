@@ -206,7 +206,16 @@ unsigned SDMAInstrInfo::insertBranch(
 
 bool SDMAInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  not_implemented();
+  unsigned Opc = Cond[0].getImm();
+  if (Opc == sdma::BT) {
+    Cond[0].setImm(sdma::BF);
+  } else if (Opc == sdma::BF) {
+    Cond[0].setImm(sdma::BT);
+  } else {
+    assert(false && "Non-branch instruction in reverseBranchCondition");
+  }
+
+  return false;
 }
 
 /// Determine if the branch target is in range.

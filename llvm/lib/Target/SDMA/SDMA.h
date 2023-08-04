@@ -1,6 +1,5 @@
 #pragma once
 
-// #include "MCTargetDesc/SDMAMCTargetDesc.h"
 #include "MCTargetDesc/SDMAMCTargetDesc.h"
 #include "utils.h"
 #include "llvm/ADT/bit.h"
@@ -70,4 +69,28 @@ inline void loadArbitraryConstant(MachineBasicBlock &MBB,
 
   not_implemented();
 }
+
+inline void buildPush(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                      const TargetInstrInfo *TII, unsigned Reg) {
+  BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(sdma::SUBri), sdma::GP7)
+      .addReg(sdma::GP7)
+      .addImm(4);
+
+  BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(sdma::ST))
+      .addReg(Reg)
+      .addImm(0)
+      .addReg(Reg);
+}
+
+inline void buildPop(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     const TargetInstrInfo *TII, unsigned Reg) {
+  BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(sdma::LD), Reg)
+      .addReg(Reg)
+      .addImm(0);
+
+  BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(sdma::ADDri), sdma::GP7)
+      .addReg(sdma::GP7)
+      .addImm(4);
+}
+
 } // namespace llvm

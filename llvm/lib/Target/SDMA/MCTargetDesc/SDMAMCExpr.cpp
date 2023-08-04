@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SDMAMCExpr.h"
+#include "utils.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -30,12 +31,12 @@ const SDMAMCExpr *SDMAMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 
 void SDMAMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
-  bool closeParen = printVariantKind(OS, Kind);
+  bool CloseParen = printVariantKind(OS, Kind);
 
   const MCExpr *Expr = getSubExpr();
   Expr->print(OS, MAI);
 
-  if (closeParen)
+  if (CloseParen)
     OS << ')';
 }
 
@@ -96,3 +97,5 @@ void SDMAMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
 void SDMAMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
 }
+
+SDMA::Fixups SDMAMCExpr::getFixupKind(VariantKind Kind) { not_implemented(); }

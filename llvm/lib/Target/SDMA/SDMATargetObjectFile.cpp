@@ -17,5 +17,4 @@ const MCExpr *SDMAELFTargetObjectFile::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   not_implemented();
-  ;
 }
