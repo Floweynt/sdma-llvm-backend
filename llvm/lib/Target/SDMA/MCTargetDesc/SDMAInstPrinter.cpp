@@ -48,25 +48,23 @@ void SDMAInstPrinter::printOperand(const MCInst *MI, int OpNum,
   MO.getExpr()->print(O, &MAI);
 }
 
-void SDMAInstPrinter::printPCRelImm(const MCInst *MI, int OpNum,
-                                     raw_ostream &O) {
-  /*if (OpNum >= MI->size()) {
-    O << "<unknown>";
-    return;
-  }*/
-
+void SDMAInstPrinter::printBranchTarget(const MCInst *MI, int OpNum,
+                                        raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
-
-  if (Op.isImm()) {
-    int64_t Imm = Op.getImm();
-    O << '.';
-    if (Imm >= 0)
-      O << '+';
-
-    O << Imm;
-  } else {
-    assert(Op.isExpr() && "Unknown pcrel immediate operand");
-    O << *Op.getExpr();
-  }
+  assert(Op.isExpr() && "Unknown pcrel immediate operand");
+  O << *Op.getExpr();
 }
 
+inline static constexpr const char *CondNames[] = {"eq", "lt", "hs"};
+
+void SDMAInstPrinter::printCondType(const MCInst *MI, int OpNum,
+                                    raw_ostream &O) {
+  O << CondNames[MI->getOperand(OpNum).getImm()];
+}
+
+void SDMAInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
+                                      raw_ostream &OS) {
+  printOperand(MI, OpNum, OS);
+  OS << "+";
+  printOperand(MI, OpNum + 1, OS);
+}

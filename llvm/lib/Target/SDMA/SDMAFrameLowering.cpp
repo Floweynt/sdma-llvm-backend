@@ -22,12 +22,6 @@ SDMAFrameLowering::SDMAFrameLowering(const SDMASubtarget &ST)
 /// the function.
 void SDMAFrameLowering::emitPrologue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {
-  MachineBasicBlock::iterator MBBI = MBB.begin();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  const Function &Fn = MF.getFunction();
-  MachineModuleInfo &MMI = MF.getMMI();
-  SDMAMachineFunctionInfo *SDMAFI = MF.getInfo<SDMAMachineFunctionInfo>();
-
   std::cerr << "TODO: " << __FILE__ << ":" << __LINE__ << '\n';
 }
 
@@ -69,14 +63,40 @@ bool SDMAFrameLowering::hasFP(const MachineFunction &MF) const {
 void SDMAFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                              BitVector &SavedRegs,
                                              RegScavenger *RS) const {
-  const SDMARegisterInfo *TRI = ST.getRegisterInfo();
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 }
 
 StackOffset
 SDMAFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                           Register &FrameReg) const {
-  not_implemented();
+  const SDMASubtarget &Subtarget = MF.getSubtarget<SDMASubtarget>();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SDMARegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const SDMAMachineFunctionInfo *FuncInfo =
+      MF.getInfo<SDMAMachineFunctionInfo>();
+  bool IsFixed = MFI.isFixedObjectIndex(FI);
+
+  bool UseFP;
+
+  if (FuncInfo->isLeafProc()) {
+    UseFP = false;
+  } else if (IsFixed) {
+    UseFP = true;
+  } else if (RegInfo->hasStackRealignment(MF)) {
+    UseFP = false;
+  } else {
+    UseFP = true;
+  }
+
+  int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FI);
+
+  if (UseFP) {
+    FrameReg = RegInfo->getFrameRegister(MF);
+    return StackOffset::getFixed(FrameOffset);
+  }
+
+  FrameReg = sdma::GP7; // %sp
+  return StackOffset::getFixed(FrameOffset + MF.getFrameInfo().getStackSize());
 }
 
 bool SDMAFrameLowering::isLeafProc(MachineFunction &MF) const {
@@ -94,7 +114,7 @@ void SDMAFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                          MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI,
                                          int NumBytes) const {
-  DebugLoc dl;
+  DebugLoc Dl;
   const SDMAInstrInfo &TII =
       *static_cast<const SDMAInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
@@ -105,7 +125,7 @@ void SDMAFrameLowering::emitSPAdjustment(MachineFunction &MF,
   }
 
   if (NumBytes > 0 && NumBytes < 256) {
-    BuildMI(MBB, MBBI, dl, TII.get(InstrType))
+    BuildMI(MBB, MBBI, Dl, TII.get(InstrType))
         .addReg(sdma::GP7, RegState::Define)
         .addReg(sdma::GP7)
         .addImm(NumBytes);

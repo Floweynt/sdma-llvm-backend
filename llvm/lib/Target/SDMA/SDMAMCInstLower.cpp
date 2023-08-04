@@ -54,7 +54,7 @@ static MCOperand lowerOperand(const MachineInstr *MI, const MachineOperand &MO,
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     if (MO.isImplicit())
-      return MCOperand();
+      break;
     return MCOperand::createReg(MO.getReg());
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
@@ -65,13 +65,13 @@ static MCOperand lowerOperand(const MachineInstr *MI, const MachineOperand &MO,
   case MachineOperand::MO_ConstantPoolIndex:
   case MachineOperand::MO_MachineBasicBlock:
     return lowerSymbolOperand(MI, MO, AP);
-
+  case MachineOperand::MO_RegisterMask:
+    break;
   case MachineOperand::MO_CImmediate:
   case MachineOperand::MO_FPImmediate:
   case MachineOperand::MO_FrameIndex:
   case MachineOperand::MO_TargetIndex:
   case MachineOperand::MO_JumpTableIndex:
-  case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut:
   case MachineOperand::MO_Metadata:
   case MachineOperand::MO_MCSymbol:
@@ -82,6 +82,8 @@ static MCOperand lowerOperand(const MachineInstr *MI, const MachineOperand &MO,
   case MachineOperand::MO_DbgInstrRef:
     not_implemented();
   }
+
+  return MCOperand();
 }
 
 void llvm::LowerSDMAMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,

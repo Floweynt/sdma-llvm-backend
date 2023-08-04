@@ -120,62 +120,13 @@ bool SDMAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 }
 
 template <>
-bool SDMAExpandPseudo::expand<sdma::PseudoPUSH>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
-  Register PushedReg = MI.getOperand(0).getReg();
-
-  buildMI(MBB, MBBI, sdma::ST).addReg(sdma::GP7).addReg(PushedReg);
-  buildMI(MBB, MBBI, sdma::SUBri)
-      .addReg(sdma::GP7, RegState::Define)
-      .addReg(sdma::GP7)
-      .addImm(4);
-
-  MI.eraseFromParent();
-
-  return true;
-}
-
-template <>
 bool SDMAExpandPseudo::expand<sdma::PseudoLoadLargeU>(Block &MBB,
                                                       BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register TargetReg = MI.getOperand(0).getReg();
-  int64_t Imm = MI.getOperand(1).getImm();
   uint64_t UImm = bit_cast<uint64_t>(MI.getOperand(1).getImm());
 
-  if (Imm < 0) {
-    if (-Imm < 256) {
-      buildMI(MBB, MBBI, sdma::LDI).addReg(TargetReg).addImm(0);
-      buildMI(MBB, MBBI, sdma::SUBri)
-          .addReg(TargetReg, RegState::Define)
-          .addReg(TargetReg)
-          .addImm(-Imm);
-
-      MI.eraseFromParent();
-      return true;
-    }
-  }
-
-  // if it's 16 bit..
-  if (UImm <= UINT16_MAX) {
-    // we can use some tricks
-    buildMI(MBB, MBBI, sdma::LDI)
-        .addReg(TargetReg)
-        .addImm((UImm & 0xff00) >> 8);
-    buildMI(MBB, MBBI, sdma::REVBLO)
-        .addReg(TargetReg, RegState::Define)
-        .addReg(TargetReg);
-    buildMI(MBB, MBBI, sdma::ORri)
-        .addReg(TargetReg, RegState::Define)
-        .addReg(TargetReg)
-        .addImm(UImm & 0xff);
-    MI.eraseFromParent();
-    return true;
-  }
-
-  // we need some weird tricks to do this one
-
-  not_implemented();
+  loadArbitraryConstant(MBB, MBBI, TII, TargetReg, UImm);
   MI.eraseFromParent();
 
   return true;
@@ -188,10 +139,7 @@ bool SDMAExpandPseudo::expand<sdma::PseudoADDri>(Block &MBB, BlockIt MBBI) {
   int64_t Imm = MI.getOperand(2).getImm();
 
   if (Imm < 0) {
-    buildMI(MBB, MBBI, sdma::SUBri)
-        .addReg(TargetReg, RegState::Define)
-        .addReg(TargetReg)
-        .addImm(-Imm);
+    buildMI(MBB, MBBI, sdma::SUBri, TargetReg).addReg(TargetReg).addImm(-Imm);
 
     MI.eraseFromParent();
     return true;
@@ -207,9 +155,7 @@ bool SDMAExpandPseudo::expand<sdma::PseudoASR>(Block &MBB, BlockIt MBBI) {
   int64_t Amount = MI.getOperand(2).getImm();
 
   while (Amount--) {
-    buildMI(MBB, MBBI, sdma::ASR1)
-        .addReg(TargetReg, RegState::Define)
-        .addReg(TargetReg);
+    buildMI(MBB, MBBI, sdma::ASR1, TargetReg).addReg(TargetReg);
   }
 
   MI.eraseFromParent();
@@ -223,9 +169,7 @@ bool SDMAExpandPseudo::expand<sdma::PseudoLSL>(Block &MBB, BlockIt MBBI) {
   int64_t Amount = MI.getOperand(2).getImm();
 
   while (Amount--) {
-    buildMI(MBB, MBBI, sdma::LSL1)
-        .addReg(TargetReg, RegState::Define)
-        .addReg(TargetReg);
+    buildMI(MBB, MBBI, sdma::LSL1, TargetReg).addReg(TargetReg);
   }
 
   MI.eraseFromParent();
@@ -239,29 +183,12 @@ bool SDMAExpandPseudo::expand<sdma::PseudoLSR>(Block &MBB, BlockIt MBBI) {
   int64_t Amount = MI.getOperand(2).getImm();
 
   while (Amount--) {
-    buildMI(MBB, MBBI, sdma::LSR1)
-        .addReg(TargetReg, RegState::Define)
-        .addReg(TargetReg);
+    buildMI(MBB, MBBI, sdma::LSR1, TargetReg).addReg(TargetReg);
   }
 
   MI.eraseFromParent();
   return true;
 }
-
-/*
-template <>
-bool SDMAExpandPseudo::expand<sdma::PseudoPOP>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
-  unsigned PushedReg = MI.getOperand(1).getReg();
-
-  buildMI(MBB, MBBI, sdma::ADDri).addReg(sdma::GP7).addImm(4);
-
-  buildMI(MBB, MBBI, sdma::LD).addReg(PushedReg).addReg(sdma::GP7);
-
-  MI.eraseFromParent();
-
-  return true;
-}*/
 
 #define EXPAND(Op)                                                             \
   case Op:                                                                     \
@@ -272,7 +199,6 @@ bool SDMAExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   int Opcode = MBBI->getOpcode();
 
   switch (Opcode) {
-    EXPAND(sdma::PseudoPUSH);
   case sdma::PseudoLoadLargeS:
     EXPAND(sdma::PseudoLoadLargeU);
     EXPAND(sdma::PseudoADDri);

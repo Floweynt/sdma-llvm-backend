@@ -2,8 +2,8 @@
 def ret : SDNode<"SDMAISD::RET", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
-def call : SDNode<"SDMAISD::CALL", SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>,
-                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def call : SDNode<"SDMAISD::CALL", SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDCallSeqStart<[ SDTCisVT<0, i32>,
                                           SDTCisVT<1, i32> ]>,
@@ -13,10 +13,9 @@ def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDCallSeqEnd<[ SDTCisVT<0, i32>
                                         SDTCisVT<1, i32> ]>,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def sdma_cmp     : SDNode<"SDMAISD::CMP", SDTypeProfile<0, 2, [SDTCisSameAs<0, 1>]>, [SDNPOutGlue]>;
-def sdma_brcc    : SDNode<"SDMAISD::BR_CC", SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>,
-                              SDTCisVT<1, i8>]>,
-                            [SDNPHasChain, SDNPInGlue]>;
+def sdma_cmp : SDNode<"SDMAISD::CMP", SDTypeProfile<0, 3, [SDTCisSameAs<0, 1>, SDTCisVT<2, i32>]>, [SDNPOutGlue]>;
+def sdma_brt : SDNode<"SDMAISD::BR_T", SDTypeProfile<0, 1, [SDTCisVT<0, OtherVT>]>, [SDNPHasChain, SDNPInGlue]>;
+def sdma_brf : SDNode<"SDMAISD::BR_F", SDTypeProfile<0, 1, [SDTCisVT<0, OtherVT>]>, [SDNPHasChain, SDNPInGlue]>;
 
 // Operands
 class ImmAsmOperand<string prefix, int width, string suffix = ""> : AsmOperandClass {
@@ -53,11 +52,6 @@ class simm<int width> : Operand<i32>, ImmLeaf<i32, !strconcat("return isInt<", !
   let OperandNamespace = "sdma";
 }
 
-class brtarget<ValueType ty> : Operand<ty> {
-  let PrintMethod = "printPCRelImm";
-  let EncoderMethod = "encodeBrTarget";
-}
-
 def uimm5 : uimm<5>;
 def uimm8 : uimm<5>;
 def uimm14 : uimm<14>;
@@ -66,11 +60,36 @@ def uimm32 : uimm<32>;
 def simm8 : simm<8>;
 def simm32 : simm<32>;
 
-def brtarget8 : brtarget<OtherVT>;
+def SDMAMEMrAsmOperand : AsmOperandClass {
+  let Name = "MEMr";
+  let ParserMethod = "parseMEMOperand";
+}
 
-def condcode : Operand<OtherVT> {
-  let PrintMethod = "printPCRelImm";
-  let EncoderMethod = "encodeBrTarget";
+def SDMAMEMriAsmOperand : AsmOperandClass {
+  let Name = "MEMri";
+  let ParserMethod = "parseMEMOperand";
+}
+
+def MEMri : Operand<iPTR> {
+  let PrintMethod = "printMemOperand";
+  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let ParserMatchClass = SDMAMEMriAsmOperand;
+}
+
+def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [frameindex], []>;
+
+def brtarget : Operand<OtherVT> {
+  let OperandType = "OPERAND_BRTARGET";
+  let OperandNamespace = "sdma";
+  let PrintMethod = "printBranchTarget";
+  let EncoderMethod = "encodeBranchTarget";
+}
+
+def condcode : Operand<i32> {
+  let OperandType = "OPERAND_CONDCODE";
+  let OperandNamespace = "sdma";
+  let PrintMethod = "printCondType";
+  let EncoderMethod = "encodeCondType";
 }
 
 class SDMAInstr<dag outOper, dag inOper, string asm, list<dag> pattern, bits<16> inst> : Instruction {
@@ -138,10 +157,6 @@ BCLRI
 BSETI
 BTSTI
 CLRF
-CMPEQ
-CMPEQI
-CMPHS
-CMPLT
 cpShReg
 DONE
 ILLEGAL
@@ -177,19 +192,21 @@ class PseudoShiftInstr<string opc, SDNode opNode> : PseudoArithUnaryInstr<opc, [
 {
 }
 
-// ALU-esque instructions
-defm ADD : ArithInstr<"add", add>;
-// handle LLVM stupidness
-def PseudoADDri : Pseudo<(outs GPRegs:$dest),  (ins GPRegs:$sdest, simm8:$imm), "!PseudoADDri $dest, $imm", 
-  [(set GPRegs:$dest, (add GPRegs:$sdest, simm8:$imm))]>;
-defm SUB : ArithInstr<"sub", sub>;
+let Defs = [FLAGS] in {
+  // ALU-esque instructions
+  defm ADD : ArithInstr<"add", add>;
+  // handle LLVM stupidness
+  def PseudoADDri : Pseudo<(outs GPRegs:$dest),  (ins GPRegs:$sdest, simm8:$imm), "!PseudoADDri $dest, $imm", 
+    [(set GPRegs:$dest, (add GPRegs:$sdest, simm8:$imm))]>;
+  defm SUB : ArithInstr<"sub", sub>;
+  def CMPrr : SDMAInstr<(outs), (ins GPRegs:$rhs, GPRegs:$lhs, condcode:$cc), "cmp$cc $rhs, $lhs ; flag = $rhs == $lhs", [(sdma_cmp GPRegs:$rhs, GPRegs:$lhs, imm:$cc)], 0>;
+  def CMPri : SDMAInstr<(outs), (ins GPRegs:$rhs, uimm8:$lhs, condcode:$cc), "cmp$cc $rhs, $lhs ; flag = $rhs == $lhs", [(sdma_cmp GPRegs:$rhs, uimm8:$lhs, imm:$cc)], 0>;
+}
+
 defm AND : ArithInstr<"and", and>;
 defm OR : ArithInstr<"or", or>;
 defm XOR : ArithInstr<"xor", xor>;
 defm ANDN : ArithInstrExt<"andn", (and GPRegs:$sdest, (not GPRegs:$src))>;
-
-def CMPEQrr : SDMAInstr<(outs), (ins GPRegs:$rhs, GPRegs:$lhs), "cmpeq $rhs, $lhs ; flag = $rhs == $lhs", [], 0>;
-def CMPEQri : SDMAInstr<(outs), (ins GPRegs:$rhs, uimm8:$lhs), "cmpeq $rhs, $lhs ; flag = $rhs == $lhs", [], 0>;
 
 def ASR1 : ShiftInstr<"asr1", sra>;
 def LSL1 : ShiftInstr<"lsl1", shl>;
@@ -206,11 +223,14 @@ def RORB : ShiftInstr<"rorb", rotr, 8>;
 // control flow
 let isTerminator = 1, isBarrier = 1 in {
   let isBranch = 1 in {
-    def BDF : SDMAInstr<(outs), (ins brtarget8:$target), "bdf $target", [], 0>;
-    def BSF : SDMAInstr<(outs), (ins brtarget8:$target), "bsf $target", [], 0>;
-    def BF : SDMAInstr<(outs), (ins brtarget8:$target), "bf $target", [], 0>;
-    def BT : SDMAInstr<(outs), (ins brtarget8:$target), "bt $target", [], 0>;
-    def JMP : SDMAInstr<(outs), (ins brtarget8:$target), "jmp $target ; %pc = $target", [(br bb:$target)], 0>;
+    let Uses = [FLAGS] in {
+      def BDF : SDMAInstr<(outs), (ins brtarget:$target), "bdf $target", [], 0>;
+      def BSF : SDMAInstr<(outs), (ins brtarget:$target), "bsf $target", [], 0>;
+      def BF : SDMAInstr<(outs), (ins brtarget:$target), "bf $target", [(sdma_brf bb:$target)], 0>;
+      def BT : SDMAInstr<(outs), (ins brtarget:$target), "bt $target", [(sdma_brt bb:$target)], 0>;
+    }
+
+    def JMP : SDMAInstr<(outs), (ins brtarget:$target), "jmp $target ; %pc = $target", [(br bb:$target)], 0>;
     //def JMP : SDMAInstr<(outs), (ins), "jmp", [], 0>;
   }
 
@@ -219,7 +239,7 @@ let isTerminator = 1, isBarrier = 1 in {
   }
 }
 
-let isCall = 1 in {
+let isCall = 1, Defs = [RPC, PC] in {
   def JSR : SDMAInstr<(outs), (ins uimm14:$target), "jsr $target ; %pc = &$target", [(call tglobaladdr:$target)], 0>;
   def JSRR : SDMAInstr<(outs), (ins GPRegs:$reg), "jsrr $reg ; %pc = $reg[0:14]", [(call GPRegs:$reg)], 0>;
 }
@@ -235,14 +255,26 @@ let isMoveReg = 1 in {
   def MOV : SDMAInstr<(outs GPRegs:$dest), (ins GPRegs:$src), "mov $dest, $src ; $dest = $src", [(set GPRegs:$dest, GPRegs:$src)], 0>;
   def LDRPC : SDMAInstr<(outs GPRegs:$dest), (ins SpecialRegs:$src), "ldrpc $dest ; $dest = RPC", [(set GPRegs:$dest, SpecialRegs:$src)], 0>;
 }
-// Data manip - memory
-def ST : SDMAInstr<(outs), (ins GPRegs:$base, GPRegs:$value), "st $base, 0, $value ; *($base) = $value", [(store GPRegs:$value, GPRegs:$base)], 0>;
-def ST_off : SDMAInstr<(outs), 
-  (ins GPRegs:$base, GPRegs:$value, uimm5:$offset), 
-  "st $base, $offset, $value ; *($base + $offset) = $value", [(store GPRegs:$value, (add GPRegs:$base, uimm5:$offset))], 0>;
 
-def PseudoPUSH : Pseudo<(outs), (ins GPRegs:$reg), "!PseudoPUSH $reg", []>;
-def PseudoPOP : Pseudo<(outs), (ins GPRegs:$reg), "!PseudoPOP $reg", []>;
+// order: [ADDR] = Value
+def ST : SDMAInstr<
+  (outs), 
+  (ins (MEMri $base, $uimm5):$addr, GPRegs:$value), 
+  "st [$addr], $value ; *($addr) = $value", 
+  [(store GPRegs:$value, ADDRri:$addr)], 
+  0
+>;
+
+// order: value = [ADDR]
+def LD : SDMAInstr<
+  (outs GPRegs:$value), 
+  (ins (MEMri $base, $uimm5):$addr), 
+  "ld [$addr], $value ; *($addr) = $value", 
+  [(set GPRegs:$value, (load ADDRri:$addr))], 
+  0
+>;
+
+def LD_off : SDMAInstr<(outs GPRegs:$value), (ins GPRegs:$base), "ld $base, 0, $value ; *($base) = $value", [(set GPRegs:$value, (load GPRegs:$base))], 0>;
 
 // weird stuff
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
@@ -252,32 +284,3 @@ def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             "!ADJCALLSTACKUP $amt1",
                             [(callseq_end timm:$amt1, timm:$amt2)]>;
 
-// def Addrr : SDMAInstr<
-//     (
-// >;
-
-// defm Add : ArithInstr<"add", add>;
-// defm And : ArithInstr<"and", and>;
-// defm Andn : ArithInstrExt<"andn", and, not>;
-
-// def AShr1 : ArithUnaryInstr<(sra $rd, 1)>; // TODO: figure out how to specify imm of one 
-// def Bclri : ArithUnaryInstr<(sra $rd, 1)>; // TODO: figure out dag for bitclear
-// def Bdf TODO: implement
-// def Bf 
-// def Bseti : ArithUnaryInstr<(sra $rd, 1)>; // TODO: figure out dag for bitset
-// def Bsf TODO: implement
-// def Bt 
-// def Btsti : ArithUnaryInstr<(sra $rd, 1)>; // TODO: figure out dag for bittest
-// def Clrf 
-// def Cmpeq : // idk
-// def Cmpeqi : // IDK!
-// def Cmphs
-// def Cmplt
-// def Jmp
-// def Jmpr
-// def Jsr
-// def Jsrr
-// def Ld
-// def Ldf
-// def Ldi
-// def Ldrpc

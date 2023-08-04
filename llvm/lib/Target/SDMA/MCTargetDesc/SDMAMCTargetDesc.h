@@ -19,6 +19,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM32,
   OPERAND_SIMM8,
   OPERAND_SIMM32,
+  OPERAND_CONDCODE,
+  OPERAND_BRTARGET
 };
 } // namespace sdma
 } // namespace llvm

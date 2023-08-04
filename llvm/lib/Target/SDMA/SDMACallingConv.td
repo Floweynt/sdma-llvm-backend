@@ -10,7 +10,6 @@ def RetCC_SDMA : CallingConv<[
 
 // Callee-saved register lists
 
-// The caller must save SPC EPC for performance reasons (hardware loops are an uncommon pattern)
 // The caller must save GP0 because it is the return value
 // The caller must save GP1-GP3 because they are arguments
 // The caller must save RPC since jsr(r) overwrites it

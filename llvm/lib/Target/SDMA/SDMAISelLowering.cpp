@@ -1,5 +1,6 @@
 #include "SDMAISelLowering.h"
 #include "MCTargetDesc/SDMAMCTargetDesc.h"
+#include "SDMA.h"
 #include "SDMARegisterInfo.h"
 #include "SDMASubtarget.h"
 #include "utils.h"
@@ -27,38 +28,36 @@ SDMATargetLowering::SDMATargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
 }
 
-static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
-                       ISD::CondCode CC, const SDLoc &Dl, SelectionDAG &DAG) {
-  // FIXME: Handle bittests someday
-  assert(!LHS.getValueType().isFloatingPoint() && "We don't handle FP yet");
-
-  // FIXME: Handle jump negative someday
+static std::pair<SDMACC::CondCodes, bool>
+selectBranchMode(SDValue &LHS, SDValue &RHS, ISD::CondCode CC) {
+  bool Negate = false;
   SDMACC::CondCodes TCC = SDMACC::COND_INVALID;
+
   switch (CC) {
-  default:
-    llvm_unreachable("Invalid integer condition!");
+  case ISD::SETNE:
+    Negate = true;
+    [[fallthrough]];
   case ISD::SETEQ:
     TCC = SDMACC::COND_EQ;
     break;
-  case ISD::SETNE:
-    TCC = SDMACC::COND_NEQ;
-    break;
-    case ISD::SETLE:
-    std::swap(LHS, RHS);
-    [[fallthrough]];
-  case ISD::SETGE: 
-    TCC = SDMACC::COND_HS;
-    break;
+    /*
   case ISD::SETGT:
     std::swap(LHS, RHS);
     [[fallthrough]];
-  case ISD::SETLT: 
+  case ISD::SETLT:
     TCC = SDMACC::COND_LT;
     break;
+  case ISD::SETLE:
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETGE:
+    TCC = SDMACC::COND_HS;
+    break;*/
+  default:
+    not_implemented();
   }
 
-  TargetCC = DAG.getConstant(TCC, Dl, MVT::i8);
-  return DAG.getNode(SDMAISD::CMP, Dl, MVT::Glue, LHS, RHS);
+  return {TCC, Negate};
 }
 
 SDValue SDMATargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
@@ -68,18 +67,17 @@ SDValue SDMATargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
   SDLoc Dl(Op);
+  auto [Cond, ShouldNegate] = selectBranchMode(LHS, RHS, CC);
+  SDValue CondVal = DAG.getConstant(Cond, Dl, MVT::i32);
 
-  SDValue TargetCC;
-  SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, Dl, DAG);
-
-  return DAG.getNode(SDMAISD::BR_CC, Dl, Op.getValueType(), Chain, Dest,
-                     TargetCC, Flag);
+  SDValue Glue = DAG.getNode(SDMAISD::CMP, Dl, MVT::Glue, LHS, RHS, CondVal);
+  return DAG.getNode(ShouldNegate ? SDMAISD::BR_F : SDMAISD::BR_T, Dl, Op.getValueType(), Chain, Dest, Glue);
 }
 
 SDValue SDMATargetLowering::LowerOperation(SDValue Op,
                                            SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  case ISD::BRCOND:
+  case ISD::BR_CC:
     return LowerBR_CC(Op, DAG);
   default:
     llvm_unreachable("unimplemented operand");
@@ -157,10 +155,17 @@ SDMATargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 const char *SDMATargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((SDMAISD::NodeType)Opcode) {
   case SDMAISD::RET:
-    return " SDMAISD::RET";
+    return "SDMAISD::RET";
   case SDMAISD::CALL:
-    return " SDMAISD::CALL";
+    return "SDMAISD::CALL";
+  case SDMAISD::CMP:
+    return "SDMAISD::CMP";
+  case SDMAISD::BR_T:
+    return "SDMAISD::BR_T";
+  case SDMAISD::BR_F:
+    return "SDMAISD::BR_F";
   case SDMAISD::FIRST_NUMBER:
+    break;
     break;
   }
   return nullptr;
@@ -223,8 +228,8 @@ SDValue SDMATargetLowering::LowerFormalArguments(
   const unsigned StackOffset = 92;
 
   unsigned InIdx = 0;
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i, ++InIdx) {
-    CCValAssign &VA = ArgLocs[i];
+  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I, ++InIdx) {
+    CCValAssign &VA = ArgLocs[I];
 
     if (Ins[InIdx].Flags.isSRet()) {
       assert(false && "what the fuck is a sret");

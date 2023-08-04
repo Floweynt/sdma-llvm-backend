@@ -17,12 +17,26 @@ SDMAInstrInfo::SDMAInstrInfo(SDMASubtarget &ST) : Subtarget(ST) {}
 
 unsigned SDMAInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
-  not_implemented();
+  if (MI.getOpcode() == sdma::LD) {
+    if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+        MI.getOperand(2).getImm() == 0) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
+    }
+  }
+  return 0;
 }
 
 unsigned SDMAInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
-  not_implemented();
+  if (MI.getOpcode() == sdma::ST) {
+    if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+        MI.getOperand(1).getImm() == 0) {
+      FrameIndex = MI.getOperand(0).getIndex();
+      return MI.getOperand(2).getReg();
+    }
+  }
+  return 0;
 }
 
 MachineBasicBlock *
@@ -46,7 +60,9 @@ static bool isIndirectBranchOpcode(int Opc) { return false; }
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
                             SmallVectorImpl<MachineOperand> &Cond) {
-  not_implemented();
+  unsigned Opc = LastInst->getOpcode();
+  Cond.push_back(MachineOperand::CreateImm(Opc));
+  Target = LastInst->getOperand(0).getMBB();
 }
 
 bool SDMAInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
@@ -133,13 +149,59 @@ bool SDMAInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
 unsigned SDMAInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                      int *BytesRemoved) const {
-  not_implemented();
+  MachineBasicBlock::iterator I = MBB.end();
+  unsigned Count = 0;
+  int Removed = 0;
+  while (I != MBB.begin()) {
+    --I;
+
+    if (I->isDebugInstr())
+      continue;
+
+    if (!isCondBranchOpcode(I->getOpcode()) &&
+        !isUncondBranchOpcode(I->getOpcode()))
+      break; // Not a branch
+
+    Removed += getInstSizeInBytes(*I);
+    I->eraseFromParent();
+    I = MBB.end();
+    ++Count;
+  }
+
+  if (BytesRemoved)
+    *BytesRemoved = Removed;
+  return Count;
 }
 
 unsigned SDMAInstrInfo::insertBranch(
     MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
     ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
-  not_implemented();
+
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
+
+  if (Cond.empty()) {
+    assert(!FBB && "Unconditional branch with multiple successors!");
+    BuildMI(&MBB, DL, get(sdma::JMP)).addMBB(TBB);
+    if (BytesAdded)
+      *BytesAdded = 8;
+    return 1;
+  }
+
+  // Conditional branch
+  unsigned Opc = Cond[0].getImm();
+
+  BuildMI(&MBB, DL, get(Opc)).addMBB(TBB);
+
+  if (!FBB) {
+    if (BytesAdded)
+      not_implemented();
+    return 1;
+  }
+
+  BuildMI(&MBB, DL, get(sdma::JMP)).addMBB(FBB);
+  if (BytesAdded)
+    not_implemented();
+  return 2;
 }
 
 bool SDMAInstrInfo::reverseBranchCondition(
@@ -174,17 +236,26 @@ void SDMAInstrInfo::storeRegToStackSlot(
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
-  if (sdma::GPRegsRegClass.hasSubClassEq(RC)) {
-    MachineMemOperand *MMO = MF->getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(*MF, FrameIndex),
-        MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex),
-        MFI.getObjectAlign(FrameIndex));
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FrameIndex),
+      MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex),
+      MFI.getObjectAlign(FrameIndex));
 
-    BuildMI(MBB, I, DL, get(sdma::PseudoPUSH))
+  if (sdma::GPRegsRegClass.hasSubClassEq(RC)) {
+
+    BuildMI(MBB, I, DL, get(sdma::ST))
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
         .addReg(SrcReg, getKillRegState(IsKill))
-        //       .addFrameIndex(FrameIndex)
-        //.addImm(0)
-        ; // .addMemOperand(MMO);
+        .addMemOperand(MMO);
+  } else if (SrcReg == sdma::RPC) {
+    BuildMI(MBB, I, DL, get(sdma::LDRPC), sdma::GP5);
+
+    BuildMI(MBB, I, DL, get(sdma::ST))
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
+        .addReg(sdma::GP5, getKillRegState(IsKill))
+        .addMemOperand(MMO);
   } else
     llvm_unreachable("Can't store this register to stack slot");
 }
@@ -202,14 +273,18 @@ void SDMAInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
-  unsigned Opcode;
-  if (sdma::GPRegsRegClass.hasSubClassEq(RC)) {
-    MachineMemOperand *MMO = MF->getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(*MF, FrameIndex),
-        MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-        MFI.getObjectAlign(FrameIndex));
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FrameIndex),
+      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
+      MFI.getObjectAlign(FrameIndex));
 
-    BuildMI(MBB, I, DL, get(sdma::PseudoPOP), DestReg);
+  if (sdma::GPRegsRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(sdma::LD), DestReg)
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (DestReg == sdma::RPC) {
+    // TODO: generate code
   } else
     llvm_unreachable("Can't load this register from stack slot");
 }
@@ -219,7 +294,9 @@ Register SDMAInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
 }
 
 unsigned SDMAInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
-  not_implemented();
+  if (MI.isDebugOrPseudoInstr())
+    not_implemented();
+  return 2;
 }
 
 bool SDMAInstrInfo::expandPostRAPseudo(MachineInstr &MI) const { return false; }

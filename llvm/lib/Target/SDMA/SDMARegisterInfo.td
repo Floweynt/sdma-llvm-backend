@@ -21,7 +21,8 @@ def GP7 : GPReg<"GP7", 7>; // we pretend that this is a stack pointer
 
 def PC : SpecialReg<"PC">;
 def RPC : SpecialReg<"RPC">;
+def FLAGS : SpecialReg<"flags">;
 
 def GPRegs : RegisterClass<"sdma", [i32], 32, (sequence "GP%u", 0, 7)>;
-def SpecialRegs : RegisterClass<"sdma", [i32], 32, (add PC, RPC)>;
+def SpecialRegs : RegisterClass<"sdma", [i32], 32, (add PC, RPC, FLAGS)>;
 
