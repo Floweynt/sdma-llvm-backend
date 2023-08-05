@@ -1,11 +1,14 @@
 class SDMAInstr<dag outOper, dag inOper, string asm, list<dag> pattern>
     : Instruction {
+  field bits<16> Inst = 0;
+
   let Namespace = "sdma";
+  let Size = 2;
+
   let OutOperandList = outOper;
   let InOperandList = inOper;
   let AsmString = asm;
   let Pattern = pattern;
-  bits<16> Inst = 0;
 }
 
 class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>

@@ -91,16 +91,15 @@ class simm<int width>
 
 // concrete operand defs
 def uimm5 : uimm<5>;
-def uimm8 : uimm<5>;
+def uimm8 : uimm<8>;
 def uimm14 : uimm<14>;
 def uimm32 : uimm<32>;
-
 def simm8 : simm<8>;
 def simm32 : simm<32>;
 
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops GPRegs, uimm8);
   let ParserMatchClass = SDMAMEMriAsmOperand;
 }
 
@@ -179,19 +178,17 @@ class PseudoShiftInstr<string asm, SDNode opNode>
 
 let Defs = [FLAGS] in {
   // ALU-esque instructions
-  let isAdd = 1 in {
-    defm ADD : ArithInstr<0b0011, "add", add>;
-    def PseudoADDri
-        : Pseudo<(outs GPRegs
-                  : $dest),
-                 (ins GPRegs
-                  : $sdest, simm8
-                  : $imm),
-                 "!PseudoADDri $dest, $imm", [(set GPRegs
-                                               : $dest, (add GPRegs
-                                                         : $sdest, simm8
-                                                         : $imm))]>;
-  }
+  defm ADD : ArithInstr<0b0011, "add", add>;
+  def PseudoADDri
+      : Pseudo<(outs GPRegs
+                : $dest),
+               (ins GPRegs
+                : $sdest, simm8
+                : $imm),
+               "!PseudoADDri $dest, $imm", [(set GPRegs
+                                             : $dest, (add GPRegs
+                                                       : $sdest, simm8
+                                                       : $imm))]>;
 
   defm SUB : ArithInstr<0b0100, "sub", sub>;
 

@@ -6,6 +6,14 @@ include "SDMAInstrInfo.td"
 
 def SDMAInstrInfo : InstrInfo;
 
-def : Processor<"generic", NoItineraries, []>;
+def Generic : Processor<"generic", NoItineraries, []>;
 
-def SDMA : Target { let InstructionSet = SDMAInstrInfo; }
+def SDMAInstPrinter : AsmWriter {
+  string AsmWriterClassName = "InstPrinter";
+  bit isMCAsmWriter = 1;
+}
+
+def SDMA : Target {
+  let InstructionSet = SDMAInstrInfo;
+  let AssemblyWriters = [SDMAInstPrinter];
+}

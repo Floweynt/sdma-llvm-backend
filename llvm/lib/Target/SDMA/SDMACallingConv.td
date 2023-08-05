@@ -1,5 +1,5 @@
 def CC_SDMA : CallingConv<[
-  CCIfType<[i32], CCAssignToReg<[GP0, GP1, GP2, GP3]>>, CCAssignToStack<4, 4>
+  CCIfType<[i32], CCAssignToReg<[GP0, GP1, GP2]>>, CCAssignToStack<4, 4>
 ]>;
 
 def RetCC_SDMA : CallingConv<[
@@ -14,4 +14,4 @@ def RetCC_SDMA : CallingConv<[
 // The caller must save RPC since jsr(r) overwrites it
 
 // That leaves GP4-7 must be callee-save
-def CSR : CalleeSavedRegs<(add RPC, (sequence "GP%u", 4, 7))>;
+def CSR : CalleeSavedRegs<(add RPC, (sequence "GP%u", 3, 7))>;

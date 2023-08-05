@@ -51,6 +51,13 @@ void SDMAInstPrinter::printOperand(const MCInst *MI, int OpNum,
 void SDMAInstPrinter::printBranchTarget(const MCInst *MI, int OpNum,
                                         raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
+
+  if (Op.isImm()) {
+    auto Imm = Op.getImm();
+    O << (Imm < 0 ? "-" : "+") << Imm;
+    return;
+  }
+
   assert(Op.isExpr() && "Unknown pcrel immediate operand");
   O << *Op.getExpr();
 }
