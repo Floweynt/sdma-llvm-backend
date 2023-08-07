@@ -37,11 +37,11 @@ class RRI<bits<4> opc, dag outOper, dag inOper, string asm, list<dag> pattern>
   bits<3> src;
   bits<3> dest;
 
-  let Inst{0...2} = src;
-  let Inst{3...6} = opc;
+  let Inst{15...11} = 0;
+  let Inst{10...8} = dest;
   let Inst{7} = 1;
-  let Inst{8...10} = dest;
-  let Inst{11...15} = 0b00000;
+  let Inst{6...3} = opc;
+  let Inst{2...0} = src;
 }
 
 /*
@@ -63,10 +63,10 @@ class RII<bits<4> opc, dag outOper, dag inOper, string asm, list<dag> pattern>
   bits<3> dest;
   bits<8> imm;
 
-  let Inst{0...7} = imm;
-  let Inst{8...10} = dest;
-  let Inst{11...14} = opc;
   let Inst{15} = 0;
+  let Inst{14...11} = opc;
+  let Inst{10...8} = dest;
+  let Inst{7...0} = imm;
 }
 
 /*
@@ -89,10 +89,10 @@ class UnaryI<bits<5> opc, dag outOper, dag inOper, string asm,
              list<dag> pattern> : SDMAInstr<outOper, inOper, asm, pattern> {
   bits<3> dest;
 
-  let Inst{0...4} = opc;
-  let Inst{5...7} = 0;
-  let Inst{8...10} = dest;
-  let Inst{11...15} = 0b00000;
+  let Inst{15...11} = 0;
+  let Inst{10...8} = dest;
+  let Inst{7...5} = 0;
+  let Inst{4...0} = opc;
 }
 
 /*
@@ -105,11 +105,11 @@ class BitI<bits<2> opc, dag outOper, dag inOper, string asm, list<dag> pattern>
   bits<3> reg;
   bits<5> imm;
 
-  let Inst{0...4} = imm;
-  let Inst{5...6} = opc;
+  let Inst{15...11} = 0;
+  let Inst{10...8} = reg;
   let Inst{7} = 0;
-  let Inst{8...10} = reg;
-  let Inst{11...15} = 0b00000;
+  let Inst{6...5} = opc;
+  let Inst{4...0} = imm;
 }
 
 /*
@@ -123,11 +123,23 @@ class MemI<bit store, dag outOper, dag inOper, string asm, list<dag> pattern>
   bits<3> base;
   bits<5> offset;
 
-  let Inst{0...2} = base;
-  let Inst{3...7} = offset;
-  let Inst{8...10} = value;
+  let Inst{15...12} = 0b0101;
   let Inst{11} = store;
-  let Inst{12...15} = 0b0101;
+  let Inst{10...8} = value;
+  let Inst{7...3} = offset;
+  let Inst{2...0} = base;
+}
+
+class MemFunctionalI<bit store, dag outOper, dag inOper, string asm,
+                     list<dag> pattern>
+    : SDMAInstr<outOper, inOper, asm, pattern> {
+  bits<3> value;
+  bits<8> base;
+
+  let Inst{15...12} = 0b0110;
+  let Inst{11} = store;
+  let Inst{10...8} = value;
+  let Inst{7...0} = base;
 }
 
 /*
@@ -141,9 +153,9 @@ class CondBrI<bits<2> opc, dag outOper, dag inOper, string asm,
               list<dag> pattern> : SDMAInstr<outOper, inOper, asm, pattern> {
   bits<8> target;
 
-  let Inst{0...7} = target;
-  let Inst{8...9} = opc;
-  let Inst{10...15} = 0b011111;
+  let Inst{15...10} = 0b011111;
+  let Inst{9...8} = opc;
+  let Inst{7...0} = target;
 }
 
 /*
@@ -154,7 +166,24 @@ class BrI<bit opc, dag outOper, dag inOper, string asm, list<dag> pattern>
     : SDMAInstr<outOper, inOper, asm, pattern> {
   bits<14> target;
 
-  let Inst{0...13} = target;
-  let Inst{14} = opc;
   let Inst{15} = 1;
+  let Inst{14} = opc;
+  let Inst{13...0} = target;
+}
+
+/*
+00000rrr001nnnnn - bclri r,n
+00000rrr010nnnnn - bseti r,n
+00000rrr011nnnnn - btsti r,n
+*/
+class BitManipI<bits<2> opc, dag outOper, dag inOper, string asm,
+                list<dag> pattern> : SDMAInstr<outOper, inOper, asm, pattern> {
+  bits<5> index;
+  bits<3> dest;
+
+  let Inst{15...11} = 0;
+  let Inst{10...8} = dest;
+  let Inst{7} = 0;
+  let Inst{6...5} = opc;
+  let Inst{4...0} = index;
 }

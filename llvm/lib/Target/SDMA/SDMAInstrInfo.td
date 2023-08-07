@@ -90,6 +90,8 @@ class simm<int width>
 }
 
 // concrete operand defs
+def uimm2 : uimm<2>;
+def uimm3 : uimm<3>;
 def uimm5 : uimm<5>;
 def uimm8 : uimm<8>;
 def uimm14 : uimm<14>;
@@ -205,11 +207,11 @@ let Defs = [FLAGS] in {
     bits<3> lhs;
     bits<3> rhs;
 
-    let Inst{0...2} = rhs;
-    let Inst{3...4} = cc;
-    let Inst{5...7} = 0b110;
-    let Inst{8...10} = lhs;
-    let Inst{11...15} = 0b00000;
+    let Inst{15...11} = 0;
+    let Inst{10...8} = lhs;
+    let Inst{7...5} = 0b110;
+    let Inst{4...3} = cc;
+    let Inst{2...0} = rhs;
   }
 
   def CMPri : SDMAInstr<(outs),
@@ -222,9 +224,9 @@ let Defs = [FLAGS] in {
     bits<3> rhs;
     bits<8> lhs;
 
-    let Inst{0...7} = lhs;
-    let Inst{8...10} = rhs;
-    let Inst{11...15} = 0b01001;
+    let Inst{15...11} = 0b01001;
+    let Inst{10...8} = rhs;
+    let Inst{7...0} = lhs;
   }
 }
 
@@ -381,7 +383,7 @@ def ST : MemI<1, (outs),
               (ins(MEMri $base, $offset)
                : $addr, GPRegs
                : $value),
-              "st [$addr], $value", [(store GPRegs
+              "st $value, [$addr]", [(store GPRegs
                                       : $value, ADDRri
                                       : $addr)]>;
 
@@ -391,11 +393,10 @@ def LD : MemI<0,
                : $value),
               (ins(MEMri $base, $offset)
                : $addr),
-              "ld [$addr], $value", [(set GPRegs
+              "ld $value, [$addr]", [(set GPRegs
                                       : $value, (load ADDRri
                                                  : $addr))]>;
-
-// weird stuff
+// stack
 def ADJCALLSTACKDOWN
     : Pseudo<(outs),
              (ins i32imm
@@ -412,4 +413,54 @@ def ADJCALLSTACKUP : Pseudo<(outs),
                             "!ADJCALLSTACKUP $amt1", [(callseq_end timm
                                                        : $amt1, timm
                                                        : $amt2)]>;
+
+// non-selected instructions
+def STF : MemFunctionalI<1, (outs),
+                         (ins uimm8
+                          : $base, GPRegs
+                          : $value),
+                         "stf $value, [$base]", []>;
+
+def LDF : MemFunctionalI<0,
+                         (outs GPRegs
+                          : $value),
+                         (ins uimm8
+                          : $base),
+                         "ltf $value, [$base]", []>;
+
+def HWLOOP : SDMAInstr<(outs),
+                       (ins uimm8
+                        : $n, uimm2
+                        : $ff),
+                       "loop $n, $ff", []> {
+  bits<8> n;
+  bits<2> ff;
+
+  let Inst{15...10} = 0b011110;
+  let Inst{9...8} = ff;
+  let Inst{7...0} = n;
+}
+
+def DONE : SDMAInstr<(outs), (ins uimm3 : $j), "done $j", []> {
+  bits<3> j;
+
+  let Inst{15...11} = 0;
+  let Inst{10...8} = j;
+  let Inst{7...0} = 0;
+}
+
+class BitManipInstr<bits<2> opc, string asm, list<dag> pattern>
+    : BitManipI<opc,
+                (outs GPRegs
+                 : $dest),
+                (ins GPRegs
+                 : $sdest, uimm8
+                 : $index),
+                !strconcat(asm, " $dest, $index"), pattern> {
+  let Constraints = "$sdest = $dest";
+}
+
+def BCLR : BitManipInstr<0b01, "bclr", []>;
+def BSET : BitManipInstr<0b10, "bset", []>;
+def BTST : BitManipInstr<0b11, "btst", []>;
 

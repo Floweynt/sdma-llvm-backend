@@ -13,6 +13,8 @@ namespace llvm {
 namespace sdma {
 enum OperandType : unsigned {
   OPERAND_FIRST_SDMA_IMM = MCOI::OPERAND_FIRST_TARGET,
+  OPERAND_UIMM2,
+  OPERAND_UIMM3,
   OPERAND_UIMM5,
   OPERAND_UIMM8,
   OPERAND_UIMM14,
