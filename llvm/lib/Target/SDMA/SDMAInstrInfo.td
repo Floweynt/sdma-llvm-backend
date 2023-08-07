@@ -464,3 +464,5 @@ def BCLR : BitManipInstr<0b01, "bclr", []>;
 def BSET : BitManipInstr<0b10, "bset", []>;
 def BTST : BitManipInstr<0b11, "btst", []>;
 
+// TODO: select bit-test
+def TST : RII<0b1000, (outs), (ins GPRegs:$dest, uimm8:$imm), "tst $dest, $imm", []>;
