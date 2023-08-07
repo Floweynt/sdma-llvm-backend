@@ -38,6 +38,9 @@ selectBranchMode(SDValue &LHS, SDValue &RHS, ISD::CondCode CC) {
     Negate = true;
     [[fallthrough]];
   case ISD::SETEQ:
+    // optimize isel
+    if(LHS.getOpcode() == ISD::Constant)
+        std::swap(LHS, RHS);
     TCC = SDMACC::COND_EQ;
     break;
     /*

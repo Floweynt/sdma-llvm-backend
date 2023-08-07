@@ -105,9 +105,14 @@ def MEMri : Operand<iPTR> {
   let ParserMatchClass = SDMAMEMriAsmOperand;
 }
 
-def brtarget : SDMAOperand<"OPERAND_BRTARGET", OtherVT> {
-  let PrintMethod = "printBranchTarget";
-  let EncoderMethod = "encodeBranchTarget";
+def rel_brtarget : SDMAOperand<"OPERAND_REL_BRTARGET", OtherVT> {
+  let PrintMethod = "printRelBranchTarget";
+  let EncoderMethod = "encodeRelBranchTarget";
+}
+
+def abs_brtarget : SDMAOperand<"OPERAND_ABS_BRTARGET", OtherVT> {
+  let PrintMethod = "printAbsBranchTarget";
+  let EncoderMethod = "encodeAbsBranchTarget";
 }
 
 def condcode : SDMAOperand<"OPERAND_CONDCODE", i32> {
@@ -216,11 +221,11 @@ let Defs = [FLAGS] in {
 
   def CMPri : SDMAInstr<(outs),
                         (ins GPRegs
-                         : $rhs, uimm8
-                         : $lhs),
+                         : $lhs, uimm8
+                         : $rhs),
                         "cmpeq $lhs, $rhs", [(sdma_cmp GPRegs
-                                              : $rhs, uimm8
-                                              : $lhs, 0)]> {
+                                              : $lhs, uimm8
+                                              : $rhs, 0)]> {
     bits<3> rhs;
     bits<8> lhs;
 
@@ -275,35 +280,47 @@ def REVBLO : ArithUnaryInstr<0b10001, "revblo", []>;
 def RORB : ShiftInstr<0b10010, "rorb", rotr, 8>;
 
 // control flow
-let isTerminator = 1, isBarrier = 1 in {
+let isTerminator = 1, isBarrier = 1, Uses = [PC] in {
   let isBranch = 1 in {
     let Uses = [FLAGS] in {
       def BDF : CondBrI<0b11, (outs),
-                        (ins brtarget
+                        (ins rel_brtarget
                          : $target),
                         "bdf $target", []>;
       def BSF : CondBrI<0b10, (outs),
-                        (ins brtarget
+                        (ins rel_brtarget
                          : $target),
                         "bsf $target", []>;
       def BF : CondBrI<0b00, (outs),
-                       (ins brtarget
+                       (ins rel_brtarget
                         : $target),
                        "bf $target", [(sdma_brf bb
                                        : $target)]>;
       def BT : CondBrI<0b01, (outs),
-                       (ins brtarget
+                       (ins rel_brtarget
                         : $target),
                        "bt $target", [(sdma_brt bb
                                        : $target)]>;
     }
 
     def JMP : BrI<0, (outs),
-                  (ins brtarget
+                  (ins abs_brtarget
                    : $target),
                   "jmp $target", [(br bb
                                    : $target)]>;
-    // def JMP : SDMAInstr<(outs), (ins), "jmp", [], 0>;
+
+    let isIndirectBranch = 1, Uses = [PC] in {
+      def JMPR : SDMAInstr<(outs),
+                           (ins GPRegs
+                            : $target),
+                           "jmpr $target", [(brind GPRegs
+                                             : $target)]> {
+        bits<3> target;
+        let Inst{15...11} = 0;
+        let Inst{8...10} = target;
+        let Inst{7...0} = 0b00001000;
+      }
+    }
   }
 
   def RET : SDMAInstr<(outs), (ins), "ret", [(ret)]> {
@@ -426,7 +443,7 @@ def LDF : MemFunctionalI<0,
                           : $value),
                          (ins uimm8
                           : $base),
-                         "ltf $value, [$base]", []>;
+                         "ldf $value, [$base]", []>;
 
 def HWLOOP : SDMAInstr<(outs),
                        (ins uimm8
@@ -441,13 +458,20 @@ def HWLOOP : SDMAInstr<(outs),
   let Inst{7...0} = n;
 }
 
-def DONE : SDMAInstr<(outs), (ins uimm3 : $j), "done $j", []> {
+class ControlI<string asm, bit opc> : SDMAInstr<(outs),
+                                                (ins uimm3
+                                                 : $j),
+                                                !strconcat(asm, " $j"), []> {
   bits<3> j;
 
   let Inst{15...11} = 0;
   let Inst{10...8} = j;
-  let Inst{7...0} = 0;
+  let Inst{7...1} = 0;
+  let Inst{0} = opc;
 }
+
+def DONE : ControlI<"done", 0>;
+def NOTIFY : ControlI<"notify", 1>;
 
 class BitManipInstr<bits<2> opc, string asm, list<dag> pattern>
     : BitManipI<opc,
@@ -465,4 +489,8 @@ def BSET : BitManipInstr<0b10, "bset", []>;
 def BTST : BitManipInstr<0b11, "btst", []>;
 
 // TODO: select bit-test
-def TST : RII<0b1000, (outs), (ins GPRegs:$dest, uimm8:$imm), "tst $dest, $imm", []>;
+def TST : RII<0b1000, (outs),
+              (ins GPRegs
+               : $dest, uimm8
+               : $imm),
+              "tst $dest, $imm", []>;

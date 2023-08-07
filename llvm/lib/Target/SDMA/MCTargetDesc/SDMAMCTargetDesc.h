@@ -22,7 +22,8 @@ enum OperandType : unsigned {
   OPERAND_SIMM8,
   OPERAND_SIMM32,
   OPERAND_CONDCODE,
-  OPERAND_BRTARGET
+  OPERAND_REL_BRTARGET,
+  OPERAND_ABS_BRTARGET
 };
 } // namespace sdma
 class MCAsmBackend;

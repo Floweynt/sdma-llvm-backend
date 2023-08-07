@@ -48,19 +48,36 @@ void SDMAInstPrinter::printOperand(const MCInst *MI, int OpNum,
   MO.getExpr()->print(O, &MAI);
 }
 
-void SDMAInstPrinter::printBranchTarget(const MCInst *MI, int OpNum,
+void SDMAInstPrinter::printRelBranchTarget(const MCInst *MI, int OpNum,
                                         raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
 
   if (Op.isImm()) {
     auto Imm = Op.getImm();
-    O << (Imm < 0 ? "-" : "+") << Imm;
+    O << '$' << (Imm < 0 ? "-" : "+") << Imm;
     return;
   }
 
   assert(Op.isExpr() && "Unknown pcrel immediate operand");
   O << *Op.getExpr();
 }
+
+void SDMAInstPrinter::printAbsBranchTarget(const MCInst *MI, int OpNum,
+                                        raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNum);
+
+  if (Op.isImm()) {
+    auto Imm = Op.getImm();
+    assert(Imm > 0 && "Illegal absolute jump to negative address");
+    O << '$' << Imm;
+    return;
+  }
+
+  assert(Op.isExpr() && "Unknown immediate operand");
+  O << *Op.getExpr();
+}
+
+
 
 inline static constexpr const char *CondNames[] = {"eq", "lt", "hs"};
 

@@ -26,7 +26,8 @@ public:
   void printOperand(const MCInst *MI, int OpNum, raw_ostream &OS);
 
   // operand printers
-  void printBranchTarget(const MCInst *MI, int OpNum, raw_ostream &OS);
+  void printRelBranchTarget(const MCInst *MI, int OpNum, raw_ostream &OS);
+  void printAbsBranchTarget(const MCInst *MI, int OpNum, raw_ostream &OS);
   void printCondType(const MCInst *MI, int OpNum, raw_ostream &OS);
   void printMemOperand(const MCInst *MI, int OpNum, raw_ostream &OS);
   void printRegName(raw_ostream &OS, MCRegister Reg) const override;

@@ -70,9 +70,12 @@ public:
   unsigned encodeImm(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const;
-  unsigned encodeBranchTarget(const MCInst &MI, unsigned OpNo,
-                              SmallVectorImpl<MCFixup> &Fixups,
-                              const MCSubtargetInfo &STI) const;
+  unsigned encodeAbsBranchTarget(const MCInst &MI, unsigned OpNo,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
+  unsigned encodeRelBranchTarget(const MCInst &MI, unsigned OpNo,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
 };
 
 } // end anonymous namespace
@@ -156,7 +159,20 @@ unsigned SDMAMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-unsigned SDMAMCCodeEmitter::encodeBranchTarget(
+unsigned SDMAMCCodeEmitter::encodeRelBranchTarget(
+    const MCInst &Inst, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &SubtargetInfo) const {
+  const MCOperand &MCOp = Inst.getOperand(OpNo);
+  if (MCOp.isReg() || MCOp.isImm())
+    return getMachineOpValue(Inst, MCOp, Fixups, SubtargetInfo);
+
+  Fixups.push_back(MCFixup::create(
+      0, MCOp.getExpr(), static_cast<MCFixupKind>(SDMA::fixup_sdma_rel_8)));
+
+  return 0;
+}
+
+unsigned SDMAMCCodeEmitter::encodeAbsBranchTarget(
     const MCInst &Inst, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
     const MCSubtargetInfo &SubtargetInfo) const {
   const MCOperand &MCOp = Inst.getOperand(OpNo);
