@@ -1,15 +1,3 @@
-//===- SDMADisassembler.cpp - Disassembler for SDMA -----------*- C++ -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file is part of the SDMA Disassembler.
-//
-//===----------------------------------------------------------------------===//
-
 #include "MCTargetDesc/SDMAMCTargetDesc.h"
 #include "TargetInfo/SDMATargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -18,6 +6,8 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/MathExtras.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -82,6 +72,22 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRelBranchTarget(MCInst &Inst, uint32_t Imm,
+                                          int64_t Address,
+                                          const MCDisassembler *Decoder) {
+  assert(isUInt<8>(Imm));
+  Inst.addOperand(MCOperand::createImm(bit_cast<int8_t>((uint8_t)Imm)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeAbsBranchTarget(MCInst &Inst, uint32_t Imm,
+                                          int64_t Address,
+                                          const MCDisassembler *Decoder) {
+  assert(isUInt<14>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }

@@ -168,7 +168,7 @@ class BrI<bit opc, dag outOper, dag inOper, string asm, list<dag> pattern>
 
   let Inst{15} = 1;
   let Inst{14} = opc;
-  let Inst{13...0} = target;
+  let Inst{0...13} = target;
 }
 
 /*

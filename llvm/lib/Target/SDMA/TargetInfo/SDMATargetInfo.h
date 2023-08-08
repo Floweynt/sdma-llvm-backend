@@ -1,6 +1,4 @@
-#ifndef LLVM_LIB_TARGET_SDMA_TARGETINFO_SPARCTARGETINFO_H
-#define LLVM_LIB_TARGET_SDMA_TARGETINFO_SPARCTARGETINFO_H
-
+#pragma once
 namespace llvm {
 
 class Target;
@@ -9,4 +7,3 @@ Target &getTheSDMATarget();
 
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_SDMA_TARGETINFO_SPARCTARGETINFO_H

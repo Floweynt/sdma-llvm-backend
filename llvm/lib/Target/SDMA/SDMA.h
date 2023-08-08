@@ -12,9 +12,9 @@ namespace llvm {
 namespace SDMACC {
 // SDMA specific condition code.
 enum CondCodes {
-  COND_EQ = 0,
-  COND_LT = 1,
-  COND_HS = 2,
+  COND_EQ = 1,
+  COND_LT = 2,
+  COND_HS = 3,
   COND_INVALID = -1,
 };
 } // namespace SDMACC

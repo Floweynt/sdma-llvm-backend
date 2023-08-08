@@ -1,15 +1,3 @@
-//===-- SDMATargetStreamer.cpp - SDMA Target Streamer Methods -----------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file provides SDMA specific target streamer methods.
-//
-//===----------------------------------------------------------------------===//
-
 #include "SDMATargetStreamer.h"
 #include "SDMAInstPrinter.h"
 #include "llvm/MC/MCRegister.h"
@@ -26,15 +14,15 @@ SDMATargetAsmStreamer::SDMATargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS)
     : SDMATargetStreamer(S), OS(OS) {}
 
-void SDMATargetAsmStreamer::emitSDMARegisterIgnore(unsigned reg) {
+void SDMATargetAsmStreamer::emitSDMARegisterIgnore(unsigned Reg) {
   OS << "\t.register "
-     << "%" << StringRef(SDMAInstPrinter::getRegisterName(reg)).lower()
+     << "%" << StringRef(SDMAInstPrinter::getRegisterName(Reg)).lower()
      << ", #ignore\n";
 }
 
-void SDMATargetAsmStreamer::emitSDMARegisterScratch(unsigned reg) {
+void SDMATargetAsmStreamer::emitSDMARegisterScratch(unsigned Reg) {
   OS << "\t.register "
-     << "%" << StringRef(SDMAInstPrinter::getRegisterName(reg)).lower()
+     << "%" << StringRef(SDMAInstPrinter::getRegisterName(Reg)).lower()
      << ", #scratch\n";
 }
 

@@ -18,21 +18,12 @@ private:
       : Kind(Kind), Expr(Expr) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const SDMAMCExpr *create(VariantKind Kind, const MCExpr *Expr,
                                   MCContext &Ctx);
-  /// @}
-  /// @name Accessors
-  /// @{
 
-  /// getOpcode - Get the kind of this expression.
   VariantKind getKind() const { return Kind; }
 
-  /// getSubExpr - Get the child of this expression.
   const MCExpr *getSubExpr() const { return Expr; }
-  /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;

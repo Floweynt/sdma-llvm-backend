@@ -1,5 +1,3 @@
-// TODO: fix
-
 #include "SDMAMCTargetDesc.h"
 #include "MCTargetDesc/SDMAInstPrinter.h"
 #include "SDMATargetStreamer.h"

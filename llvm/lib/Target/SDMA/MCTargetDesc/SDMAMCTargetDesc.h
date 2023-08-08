@@ -36,13 +36,12 @@ class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
 
-MCCodeEmitter *createSDMAMCCodeEmitter(const MCInstrInfo &MCII,
-                                        MCContext &Ctx);
+MCCodeEmitter *createSDMAMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 MCAsmBackend *createSDMAAsmBackend(const Target &T, const MCSubtargetInfo &STI,
-                                    const MCRegisterInfo &MRI,
-                                    const MCTargetOptions &Options);
+                                   const MCRegisterInfo &MRI,
+                                   const MCTargetOptions &Options);
 std::unique_ptr<MCObjectTargetWriter> createSDMAELFObjectWriter(bool Is64Bit,
-                                                                 uint8_t OSABI);
+                                                                uint8_t OSABI);
 } // namespace llvm
 
 #define GET_REGINFO_ENUM

@@ -49,12 +49,15 @@ void SDMAInstPrinter::printOperand(const MCInst *MI, int OpNum,
 }
 
 void SDMAInstPrinter::printRelBranchTarget(const MCInst *MI, int OpNum,
-                                        raw_ostream &O) {
+                                           raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
 
   if (Op.isImm()) {
     auto Imm = Op.getImm();
-    O << '$' << (Imm < 0 ? "-" : "+") << Imm;
+    O << '$';
+    if (Imm > 0)
+      O << "+";
+    O << Imm;
     return;
   }
 
@@ -63,7 +66,7 @@ void SDMAInstPrinter::printRelBranchTarget(const MCInst *MI, int OpNum,
 }
 
 void SDMAInstPrinter::printAbsBranchTarget(const MCInst *MI, int OpNum,
-                                        raw_ostream &O) {
+                                           raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
 
   if (Op.isImm()) {
@@ -76,8 +79,6 @@ void SDMAInstPrinter::printAbsBranchTarget(const MCInst *MI, int OpNum,
   assert(Op.isExpr() && "Unknown immediate operand");
   O << *Op.getExpr();
 }
-
-
 
 inline static constexpr const char *CondNames[] = {"eq", "lt", "hs"};
 

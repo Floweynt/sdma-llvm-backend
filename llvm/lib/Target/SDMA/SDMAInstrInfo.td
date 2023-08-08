@@ -108,11 +108,13 @@ def MEMri : Operand<iPTR> {
 def rel_brtarget : SDMAOperand<"OPERAND_REL_BRTARGET", OtherVT> {
   let PrintMethod = "printRelBranchTarget";
   let EncoderMethod = "encodeRelBranchTarget";
+  let DecoderMethod = "decodeRelBranchTarget";
 }
 
 def abs_brtarget : SDMAOperand<"OPERAND_ABS_BRTARGET", OtherVT> {
   let PrintMethod = "printAbsBranchTarget";
   let EncoderMethod = "encodeAbsBranchTarget";
+  let DecoderMethod = "decodeAbsBranchTarget";
 }
 
 def condcode : SDMAOperand<"OPERAND_CONDCODE", i32> {
