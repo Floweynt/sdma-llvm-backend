@@ -45,6 +45,7 @@ inline void loadArbitraryConstant(MachineBasicBlock &MBB,
         .addImm(Val);
     return;
   }
+
   int32_t SignedVal = bit_cast<int32_t>(Val);
 
   if (-256 < SignedVal && SignedVal < 0) {

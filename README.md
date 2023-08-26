@@ -37,3 +37,15 @@ chat](https://discord.gg/xS7Z362), or #llvm IRC channel on
 
 The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
 participants to all modes of communication within the project.
+
+## Building With SDMA Backend
+```
+mkdir build
+cd build
+CC="clang" CXX="clang++" cmake -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=SDMA -DCMAKE_CXX_FLAGS="-fuse-ld=mold" ../llvm -GNinja -DLLVM_TARGETS_TO_BUILD="RISCV;Sparc"
+ninja -j12 llc
+```
+To compile c code (without building clang, and assuming you have clang installing natively):
+```
+clang <file> -S -emit-llvm -o - | ./bin/llc -march=sdma -o -
+```

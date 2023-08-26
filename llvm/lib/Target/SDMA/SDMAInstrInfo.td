@@ -282,7 +282,7 @@ def REVBLO : ArithUnaryInstr<0b10001, "revblo", []>;
 def RORB : ShiftInstr<0b10010, "rorb", rotr, 8>;
 
 // control flow
-let isTerminator = 1, isBarrier = 1, Uses = [PC] in {
+let isTerminator = 1, isBarrier = 1 in {
   let isBranch = 1 in {
     let Uses = [FLAGS] in {
       def BDF : CondBrI<0b11, (outs),
